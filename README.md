@@ -1,1 +1,1 @@
-# cu2Rec: CUDA Meets Recommender Systems
+# cu2rec: CUDA Meets Recommender Systems
