@@ -81,7 +81,3 @@ CudaCOOMatrix::~CudaCOOMatrix() {
     CHECK_CUDA(cudaFree(data));
 }
 }  // namespace cu2rec
-
-int main() {
-    return 0;
-}
