@@ -24,11 +24,6 @@ cu2rec::CudaCSRMatrix* readSparseMatrix(std::vector<Rating> *ratings, int rows, 
     indptr_vec.push_back(ratings->size());
     int *indptr = indptr_vec.data();
 
-    // Check the values look good
-    for(int i = 0; i < ratings->size(); i++) {
-        std::cout << data[i] << "\n";
-    }
-
     // Create the Sparse Matrix
     const int *indptr_c = const_cast<const int*>(indptr);
     const int *indices_c = const_cast<const int*>(indices);
