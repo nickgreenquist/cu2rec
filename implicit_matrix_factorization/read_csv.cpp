@@ -14,12 +14,19 @@ void printRating(Rating r){
     std::cout << r.userID << "  "<< r.itemID <<"  "<< r.rating << "\n";
 }
 
-int main(){
-    std::ifstream ratingsFile("../data/ratings.csv");
+void printCSV(std::vector<Rating> *ratings) {
+    // Print the vector
+    std::cout  << "UserID" << "   ItemID" << "   Rating\n";
+    for (int x(0); x < ratings->size(); ++x){
+        printRating(ratings->at(x));
+    }
+}
 
-    if (ratingsFile.is_open() ){
-        std::vector<Rating> ratings;
+std::vector<Rating> readCSV(char * filename) {
+    std::ifstream ratingsFile(filename);
+    std::vector<Rating> ratings;
 
+    if (ratingsFile.is_open()){
         // Read the file;
         int userID, itemID;
         float rating;
@@ -33,13 +40,15 @@ int main(){
             ratings.push_back({userID, itemID, rating});
         }
 
-        // Print the vector
-        std::cout  << "UserID" << "   ItemID" << "   Rating\n";
-        for (int x(0); x < ratings.size(); ++x){
-            printRating(ratings.at(x) );
-        }
+        return ratings;
     }
     else{
         std::cerr<<"ERROR: The file isnt open.\n";
+        return ratings;
     }
+}
+
+int main(int argc, char **argv){
+    std::vector<Rating> ratings = readCSV(argv[1]);
+    printCSV(&ratings);
 }
