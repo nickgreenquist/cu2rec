@@ -15,7 +15,7 @@ cu2rec::CudaCSRMatrix* readSparseMatrix(std::vector<Rating> *ratings, int rows, 
     for(int i = 0; i < ratings->size(); ++i) {
         Rating r = ratings->at(i);
         if(r.userID != lastUser) {
-            indptr_vec.push_back(r.userID);
+            indptr_vec.push_back(i);
             lastUser = r.userID;
         }
         indices[i] = r.itemID;
@@ -40,6 +40,38 @@ int main(int argc, char **argv){
     printCSV(&ratings);
     std::cout << "Rows: " << rows << ", Cols: " << cols << "\n";
     cu2rec::CudaCSRMatrix* matrix = readSparseMatrix(&ratings, rows, cols);
+
+    // copy matrix from Device to Host
+    int nonzeros =  (int)(ratings.size());
+    cu2rec::CudaCSRMatrix* matrix_host;
+    int * indptr, * indices;
+    float * data;
+    indptr = new int[(rows + 1)];
+    indices = new int[nonzeros];
+    data = new float[nonzeros];
+
+    cudaMemcpy(indptr, matrix->indptr, (rows + 1) * sizeof(int), cudaMemcpyDeviceToHost);
+    cudaMemcpy(indices, matrix->indices,  nonzeros * sizeof(int), cudaMemcpyDeviceToHost);
+    cudaMemcpy(data, matrix->data, nonzeros * sizeof(float), cudaMemcpyDeviceToHost);
+
+    // check if values look good
+    std::cout << "indptr: ";
+    for(int i = 0; i < (rows + 1); i++) {
+        std::cout << indptr[i] << " ";
+    }
+    std::cout << "\n";
+
+    std::cout << "indices: ";
+    for(int i = 0; i < nonzeros; i++) {
+        std::cout << indices[i] << " ";
+    }
+    std::cout << "\n";
+
+    std::cout << "data: ";
+    for(int i = 0; i < nonzeros; i++) {
+        std::cout << data[i] << " ";
+    }
+    std::cout << "\n";
 
     //free memory
     delete matrix;
