@@ -7,5 +7,6 @@
 4. `make`
 
 ## Running Tests
-1. `make` will create test executables
-2. run with `./test_{}`
+1. `cd tests`
+2. `make`
+2. `./test_{}`

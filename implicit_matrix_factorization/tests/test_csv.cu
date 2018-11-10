@@ -5,7 +5,7 @@
 
 using namespace std;
 
-string filename = "../data/test_ratings.csv";
+string filename = "../../data/test_ratings.csv";
 
 vector<Rating> test_read_csv() {
     int rows, cols;
