@@ -1,5 +1,9 @@
 # cu2rec: CUDA Meets Recommender Systems
 
+## Data
+1. Download movielens data and save in `data` folder
+2. Link: https://grouplens.org/datasets/movielens/
+
 ## Compiling Code
 1. SSH into Prince or Cuda using NYU credentials
 2. `srun -t5:00:00 --mem=30000 --gres=gpu:1 --pty /bin/bash`
