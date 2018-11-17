@@ -16,18 +16,11 @@ __global__ void loss_kernel(int factors, int user_count, int item_count, const f
     float total_loss = 0.0;
     for (int u = blockIdx.x; u < user_count; u += gridDim.x) {
         // get this user's factors
-        float *p = new float[factors];
-        for(int f = 0; f < factors; f++) {
-            p[f] = P[index(u, f, factors)];
-        }
+        const float * p = &P[u * factors];
 
         for (int i = indptr[u]; i < indptr[u + 1]; ++i) {
             // get this item's factors
-            float *Qi = new float[factors];
-            int item_id = indices[i];
-            for(int f = 0; f < factors; f++) {
-                Qi[f] = Q[index(item_id, f, factors)];
-            }
+            const float * Qi = &Q[indices[i] * factors];
 
             // update loss with this rating and prediction
             float rating = data[i];
@@ -63,9 +56,15 @@ void calculate_loss_gpu(int factors, int user_count, int item_count, int num_rat
 
     // call the kernel with hardcoded dimensions for now
     // TODO: input better dimensions
-    loss_kernel<<<1024, factors, sizeof(float) * factors>>>(
+    dim3 dimBlock(factors);
+    dim3 dimGrid(user_count / factors + 1);
+    loss_kernel<<<dimGrid, dimBlock>>>(
         factors, user_count, item_count, P_d->data, Q_d->data,
         matrix->indptr, matrix->indices, matrix->data, output->data, error_d);
+    cudaError_t lastError = cudaGetLastError();
+    if(cudaSuccess != lastError) {
+        printf("ERROR: %s\n", cudaGetErrorName(lastError));
+    }
     cudaDeviceSynchronize();
 
     // move loss output back to host to return
