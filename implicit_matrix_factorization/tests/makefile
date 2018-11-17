@@ -7,7 +7,7 @@ test_matrix: create_bin
 	nvcc -std=c++11 -o bin/test_matrix -arch=sm_52 ../read_csv.cu ../matrix.cu test_matrix.cu
 
 test_sgd: create_bin
-	nvcc -std=c++11 -o bin/test_sgd -arch=sm_52 ../read_csv.cu ../matrix.cu ../sgd.cu test_sgd.cu
+	nvcc -std=c++11 -o bin/test_sgd -arch=sm_52 -G ../read_csv.cu ../matrix.cu ../sgd.cu test_sgd.cu
 
 create_bin:
 	mkdir -p bin

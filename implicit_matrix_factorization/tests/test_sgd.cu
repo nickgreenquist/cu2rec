@@ -1,14 +1,20 @@
 #include <assert.h>
+#include <vector>
 
 #include "../matrix.h"
 #include "../read_csv.h"
-#include "../sgd.cu"
+#include "../sgd.h"
+
+using namespace cu2rec;
+using namespace std;
+
+string filename = "../../data/test_ratings.csv";
 
 void test_sgd() {
     // Initalize the input matrix
     int rows, cols;
     vector<Rating> ratings = readCSV(filename, &rows, &cols);
-    cu2rec::CudaCSRMatrix* matrix = createSparseMatrix(&ratings, rows, cols);
+    CudaCSRMatrix* matrix = createSparseMatrix(&ratings, rows, cols);
 
     // Hyperparams
     int n_factors = 1;
@@ -39,19 +45,19 @@ void test_sgd() {
     cudaMemcpy(Q_device_target, Q, Q_size, cudaMemcpyHostToDevice);
 
     // Create the errors - we would get this through the loss function
-    float *errors = new float[matrix->nonzero];
-    for(int i = 0; i < matrix->nonzero; ++i) {
+    float *errors = new float[matrix->nonzeros];
+    for(int i = 0; i < matrix->nonzeros; ++i) {
         errors[i] = 1;
     }
     float *errors_device;
-    cudaMalloc(&errors_device, matrix->nonzero * sizeof(float));
-    cudaMemcpy(errors_device, errors, matrix->nonzero * sizeof(float), cudaMemcpyHostToDevice);
+    cudaMalloc(&errors_device, matrix->nonzeros * sizeof(float));
+    cudaMemcpy(errors_device, errors, matrix->nonzeros * sizeof(float), cudaMemcpyHostToDevice);
 
     // Dimensions
     int n_threads = 32;
     dim3 dimBlock(n_threads);
     dim3 dimGrid(rows / n_threads + 1);
-    sgd_update<<<dimGrid, dimBlock>>>(matrix, P_device, Q_device, P_device_target, Q_device_target, n_factors, errors_device, rows, cols, learning_rate);
+    sgd_update<<<dimGrid, dimBlock>>>(matrix->indptr, matrix->indices, P_device, Q_device, P_device_target, Q_device_target, n_factors, errors_device, rows, cols, learning_rate);
     std::swap(P_device, P_device_target);
     std::swap(Q_device, Q_device_target);
 
@@ -64,15 +70,16 @@ void test_sgd() {
     // For now, print the matrices
     cout << "Updated P: ";
     for(int i = 0; i < rows; ++i) {
-        cout << P[i] << " ";
+        cout << P_updated[i] << " ";
     }
     cout << endl << "Updated Q: ";
     for(int i = 0; i < cols; ++i) {
-        cout << Q[i] << " ";
+        cout << Q_updated[i] << " ";
     }
     cout << endl;
 
     // Clean up
+    /*
     cudaFree(P_device);
     cudaFree(P_device_target);
     cudaFree(Q_device);
@@ -84,9 +91,11 @@ void test_sgd() {
     delete Q;
     delete Q_updated;
     delete errors;
+    */
 }
 
 int main() {
     test_sgd();
+    cudaDeviceSynchronize();
     return 0;
 }
