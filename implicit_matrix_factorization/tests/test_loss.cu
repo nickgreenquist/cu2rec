@@ -1,8 +1,9 @@
+#include <assert.h>
+#include <math.h>       /* pow */
+
 #include "../read_csv.h"
 #include "../matrix.h"
 #include "../loss.h"
-
-#include <assert.h>
 
 #define index(i, j, N)  ((i)*(N)) + (j)
 
@@ -31,8 +32,8 @@ void test_loss_sequential() {
 
     // create temp P and Q
     int factors = 2;
-    int user_count = 6;
-    int item_count = 5;
+    int user_count = rows;
+    int item_count = cols;
     float *P = new float[user_count * factors];
     float *Q = new float[item_count * factors];
     for(int u = 0; u < user_count; u++) {
@@ -49,7 +50,6 @@ void test_loss_sequential() {
     float loss = calculate_loss_sequential(factors, user_count, item_count, P, Q, indptr, indices, data);
 
     cout << "\nLoss: " << loss << "\n";
-
     assert(loss == 80.0);
 
     //free memory
@@ -70,8 +70,8 @@ void test_loss() {
 
     // create temp P and Q
     int factors = 2;
-    int user_count = 6;
-    int item_count = 5;
+    int user_count = rows;
+    int item_count = cols;
     float *P = new float[user_count * factors];
     float *Q = new float[item_count * factors];
     for(int u = 0; u < user_count; u++) {
@@ -85,15 +85,21 @@ void test_loss() {
         }
     }
 
-    float loss = calculate_loss_gpu(factors, user_count, item_count, P, Q, matrix);
-    cout << "\nLoss: " << loss << "\n";
+    float * error = new float[ratings.size()];
+    calculate_loss_gpu(factors, user_count, item_count, ratings.size(), P, Q, matrix, error);
+    float loss = 0.0;
+    for(int i = 0; i < ratings.size(); i++) {
+        loss += pow(error[i], 2);
+    }
 
+    cout << "\nLoss: " << loss << "\n";
     assert(loss == 80.0);
 
     //free memory
     delete matrix;
     delete [] P;
     delete [] Q;
+    delete [] error;
 }
 
 int main() {

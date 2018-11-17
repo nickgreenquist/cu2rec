@@ -12,7 +12,7 @@
 #define index(i, j, N)  ((i)*(N)) + (j)
 
 // PARALLEL
-__global__ void loss_kernel(int factors, int user_count, int item_count, const float * P, const float * Q, const int * indptr, const int * indices, const float * data, float * output) {
+__global__ void loss_kernel(int factors, int user_count, int item_count, const float * P, const float * Q, const int * indptr, const int * indices, const float * data, float * output, float * error) {
     float total_loss = 0.0;
     for (int u = blockIdx.x; u < user_count; u += gridDim.x) {
         // get this user's factors
@@ -33,6 +33,7 @@ __global__ void loss_kernel(int factors, int user_count, int item_count, const f
             float rating = data[i];
             float pred = cu2rec::dot(Qi, p);
 
+            error[i] = rating - pred;
             float loss = pow(rating - pred, 2);
             total_loss += loss;
 
@@ -46,7 +47,7 @@ __global__ void loss_kernel(int factors, int user_count, int item_count, const f
     }
 }
 
-float calculate_loss_gpu(int factors, int user_count, int item_count, const float * P, const float * Q, cu2rec::CudaCSRMatrix* matrix) {
+void calculate_loss_gpu(int factors, int user_count, int item_count, int num_ratings, const float * P, const float * Q, cu2rec::CudaCSRMatrix* matrix, float * error) {
     // Turn P and Q into CudaDenseMatrices on GPU
     cu2rec::CudaDenseMatrix* P_d = new cu2rec::CudaDenseMatrix(user_count, factors, P);
     cu2rec::CudaDenseMatrix* Q_d = new cu2rec::CudaDenseMatrix(item_count, factors, Q);
@@ -55,21 +56,28 @@ float calculate_loss_gpu(int factors, int user_count, int item_count, const floa
     float loss[1] = {0};
     cu2rec::CudaDenseMatrix* output = new cu2rec::CudaDenseMatrix(1, 1, loss);
 
+    // make copy of error array
+    float* error_d;
+    cudaMalloc((void **) &error_d, num_ratings * sizeof(float));
+    cudaMemset(error_d, 0, num_ratings * sizeof(float));
+
     // call the kernel with hardcoded dimensions for now
     // TODO: input better dimensions
     loss_kernel<<<1024, factors, sizeof(float) * factors>>>(
         factors, user_count, item_count, P_d->data, Q_d->data,
-        matrix->indptr, matrix->indices, matrix->data, output->data);
+        matrix->indptr, matrix->indices, matrix->data, output->data, error_d);
     cudaDeviceSynchronize();
 
     // move loss output back to host to return
     output->to_host(loss);
-    return loss[0];
+
+    // move array of errors back to host
+    cudaMemcpy(error, error_d, num_ratings * sizeof(float), cudaMemcpyDeviceToHost);
+    cudaFree(error_d);
 }
 
 // SEQUENTIAL
-float dot_product_sequential(const float *Qi, const float *p, int n)
-{
+float dot_product_sequential(const float *Qi, const float *p, int n) {
     float result = 0.0;
     for (int i = 0; i < n; i++)
         result += Qi[i]*p[i];
@@ -95,6 +103,8 @@ float calculate_loss_sequential(int factors, int user_count, int item_count, con
             // update loss with this rating and prediction
             float rating = data[i];
             float pred = dot_product_sequential(Qi, p, factors);
+
+            // std::cout << "Rating: " << rating << ", Pred: " << pred << "\n";
 
             float loss = pow(rating - pred, 2);
             total_loss += loss;
