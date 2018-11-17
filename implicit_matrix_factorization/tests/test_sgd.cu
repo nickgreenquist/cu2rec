@@ -67,16 +67,15 @@ void test_sgd() {
     cudaMemcpy(P_updated, P_device, P_size, cudaMemcpyDeviceToHost);
     cudaMemcpy(Q_updated, Q_device, Q_size, cudaMemcpyDeviceToHost);
 
-    // For now, print the matrices
-    cout << "Updated P: ";
+    // Assert everything is equal
+    vector<float> P_expected = {1.004, 1.003, 1.003, 1.003, 1.003, 1.002};
+    vector<float> Q_expected = {1.004, 1.005, 1.004, 1.002, 1.003};
     for(int i = 0; i < rows; ++i) {
-        cout << P_updated[i] << " ";
+        assert(fabs(P_expected.at(i) - P_updated[i]) < 1e-3);
     }
-    cout << endl << "Updated Q: ";
     for(int i = 0; i < cols; ++i) {
-        cout << Q_updated[i] << " ";
+        assert(fabs(Q_expected.at(i) - Q_updated[i]) < 1e-3);
     }
-    cout << endl;
 
     // Clean up
     cudaFree(P_device);
@@ -93,7 +92,8 @@ void test_sgd() {
 }
 
 int main() {
+    cout << "Testing a single gradient update...\n";
     test_sgd();
-    cudaDeviceSynchronize();
+    cout << "PASSED\n";
     return 0;
 }

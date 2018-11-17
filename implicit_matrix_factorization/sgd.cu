@@ -20,7 +20,7 @@ __global__ void sgd_update(int *indptr, int *indices, float *P, float *Q, float 
                 float p_update = learning_rate * errors[y_i] * Q[q_index];
                 P_target[p_index] += p_update;
                 float q_update = learning_rate * errors[y_i] * P[p_index];
-                Q_target[q_index] += q_update;
+                atomicAdd(&Q_target[q_index], q_update);
             }
         }
     }
