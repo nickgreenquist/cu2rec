@@ -79,7 +79,6 @@ void test_sgd() {
     cout << endl;
 
     // Clean up
-    /*
     cudaFree(P_device);
     cudaFree(P_device_target);
     cudaFree(Q_device);
@@ -91,7 +90,6 @@ void test_sgd() {
     delete Q;
     delete Q_updated;
     delete errors;
-    */
 }
 
 int main() {
