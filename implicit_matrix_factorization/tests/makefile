@@ -1,9 +1,16 @@
-read_csv:
-	nvcc -std=c++11 -o test_csv -arch=sm_52 ../read_csv.cu ../matrix.cu test_csv.cu
-	nvcc -std=c++11 -o test_matrix -arch=sm_52 ../read_csv.cu ../matrix.cu test_matrix.cu
-	nvcc -std=c++11 -o test_sgd -arch=sm_52 ../read_csv ../matrix.cu test_sgd.cu
+all: test_csv test_matrix test_sgd
+
+test_csv: create_bin
+	nvcc -std=c++11 -o bin/test_csv -arch=sm_52 ../read_csv.cu ../matrix.cu test_csv.cu
+
+test_matrix: create_bin
+	nvcc -std=c++11 -o bin/test_matrix -arch=sm_52 ../read_csv.cu ../matrix.cu test_matrix.cu
+
+test_sgd: create_bin
+	nvcc -std=c++11 -o bin/test_sgd -arch=sm_52 ../read_csv.cu ../matrix.cu ../sgd.cu test_sgd.cu
+
+create_bin:
+	mkdir -p bin
 
 clean:
-	rm -f test_csv
-	rm -f test_matrix
-	rm -f test_sgd
+	rm -rf bin/
