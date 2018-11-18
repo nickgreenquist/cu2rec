@@ -85,8 +85,17 @@ void test_loss() {
         }
     }
 
-    float * error = new float[ratings.size()];
-    calculate_loss_gpu(factors, user_count, item_count, ratings.size(), P, Q, matrix, error);
+    // make copy of error array
+    float* error = new float[ratings.size()];
+    float* error_d;
+    cudaMalloc((void **) &error_d, ratings.size() * sizeof(float));
+    cudaMemset(error_d, 0, ratings.size() * sizeof(float));
+    
+    calculate_loss_gpu(factors, user_count, item_count, ratings.size(), P, Q, matrix, error_d);
+
+    // move array of errors back to host
+    cudaMemcpy(error, error_d, ratings.size() * sizeof(float), cudaMemcpyDeviceToHost);
+
     float loss = 0.0;
     for(int i = 0; i < ratings.size(); i++) {
         loss += pow(error[i], 2);
@@ -100,6 +109,7 @@ void test_loss() {
     delete [] P;
     delete [] Q;
     delete [] error;
+    cudaFree(error_d);
 }
 
 int main() {
