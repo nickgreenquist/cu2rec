@@ -53,11 +53,38 @@ void test_sgd() {
     cudaMalloc(&errors_device, matrix->nonzeros * sizeof(float));
     cudaMemcpy(errors_device, errors, matrix->nonzeros * sizeof(float), cudaMemcpyHostToDevice);
 
+    // Create the bias arrays
+    float *user_bias = new float[rows];
+    for(int u = 0; u < rows; u++) {
+        user_bias[u] = 1.0;
+    }
+    float *user_bias_device;
+    cudaMalloc((void **) &user_bias_device, rows * sizeof(float));
+    cudaMemcpy(user_bias_device, user_bias, rows * sizeof(float), cudaMemcpyHostToDevice);
+
+    float *item_bias = new float[cols];
+    for(int i = 0; i < cols; i++) {
+        item_bias[i] = 1.0;
+    }
+    float *item_bias_device;
+    cudaMalloc((void **) &item_bias_device, cols * sizeof(float));
+    cudaMemcpy(item_bias_device, item_bias, cols * sizeof(float), cudaMemcpyHostToDevice);
+
+    // Create bias targets
+    float *user_bias_target, *item_bias_target;
+    cudaMalloc(&user_bias_target, rows * sizeof(float));
+    cudaMemcpy(user_bias_target, user_bias, rows * sizeof(float), cudaMemcpyHostToDevice);
+    cudaMalloc(&item_bias_target, cols * sizeof(float));
+    cudaMemcpy(item_bias_target, item_bias, cols * sizeof(float), cudaMemcpyHostToDevice);
+
+
     // Dimensions
     int n_threads = 32;
     dim3 dimBlock(n_threads);
     dim3 dimGrid(rows / n_threads + 1);
-    sgd_update<<<dimGrid, dimBlock>>>(matrix->indptr, matrix->indices, P_device, Q_device, P_device_target, Q_device_target, n_factors, errors_device, rows, cols, learning_rate);
+    sgd_update<<<dimGrid, dimBlock>>>(matrix->indptr, matrix->indices, P_device, Q_device, P_device_target, Q_device_target, n_factors,
+                                      errors_device, rows, cols, learning_rate, user_bias_device, item_bias_device, user_bias_target,
+                                      item_bias_target, learning_rate, learning_rate);
     std::swap(P_device, P_device_target);
     std::swap(Q_device, Q_device_target);
 
@@ -83,12 +110,18 @@ void test_sgd() {
     cudaFree(Q_device);
     cudaFree(Q_device_target);
     cudaFree(errors_device);
+    cudaFree(user_bias_device);
+    cudaFree(user_bias_target);
+    cudaFree(item_bias_device);
+    cudaFree(item_bias_target);
     delete matrix;
     delete P;
     delete P_updated;
     delete Q;
     delete Q_updated;
     delete errors;
+    delete [] user_bias;
+    delete [] item_bias;
 }
 
 int main() {
