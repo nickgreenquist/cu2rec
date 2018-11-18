@@ -14,7 +14,8 @@
 using namespace cu2rec;
 
 // PARALLEL
-__global__ void loss_kernel_user(int factors, int user_count, int item_count, const float * P, const float * Q, const int * indptr, const int * indices, const float * data, float * output, float * error) {
+__global__ void loss_kernel(int factors, int user_count, int item_count, const float * P, const float * Q, const int * indptr, 
+                            const int * indices, const float * data, float * error, float * user_bias, float * item_bias) {
     // One thread per user
     int u = blockDim.x * blockIdx.x + threadIdx.x;
     if(u < user_count) {
@@ -23,25 +24,20 @@ __global__ void loss_kernel_user(int factors, int user_count, int item_count, co
 
         for (int i = indptr[u]; i < indptr[u + 1]; ++i) {
             // get this item's factors
-            const float * Qi = &Q[indices[i] * factors];
+            int item_id = indices[i];
+            const float * Qi = &Q[item_id * factors];
 
             // update loss with this rating and prediction
             float rating = data[i];
 
-            // TODO: remove hacky dot once we spin our own
-            //float pred = cu2rec::dot(Qi, p);
-
-            // TODO: create a better but not hacky dot function, but for now this works well
-            float pred = 0.0;
+            // calculate predicted rating
+            // TODO: add global bias
+            float pred = user_bias[u] + item_bias[item_id];
             for (int f = 0; f < factors; f++)
                 pred += Qi[f]*p[f];
 
             // set the error value for this rating
             error[i] = rating - pred;
-
-            // TODO: do we want to do this in kernel here, or will sgd.cu handle the square loss for each error?
-            float loss = pow(rating - pred, 2);
-            // total_loss += loss;
         }
     }
 }
@@ -65,33 +61,19 @@ __global__ void total_loss_kernel(float *errors, float *losses, int n_errors, in
     }
 }
 
-void calculate_loss_gpu(CudaDenseMatrix* P_d, CudaDenseMatrix* Q_d, int factors, int user_count, int item_count, int num_ratings, CudaCSRMatrix* matrix, float * error_d) {
-    // hacky way to store the total loss form kernel so we can retrieve it later
-    float loss[1] = {0};
-    CudaDenseMatrix* output = new CudaDenseMatrix(1, 1, loss);
-
-    // Dimensions for kernel call
+void calculate_loss_gpu(CudaDenseMatrix* P_d, CudaDenseMatrix* Q_d, int factors, int user_count, int item_count, int num_ratings, 
+                        CudaCSRMatrix* matrix, float * error_d, float * user_bias,  float * item_bias) {
     int n_threads = 32;
     dim3 dimBlock(n_threads);
     dim3 dimGrid(user_count / n_threads + 1);
-    loss_kernel_user<<<dimGrid, dimBlock>>>(
+    loss_kernel<<<dimGrid, dimBlock>>>(
         factors, user_count, item_count, P_d->data, Q_d->data,
-        matrix->indptr, matrix->indices, matrix->data, output->data, error_d);
+        matrix->indptr, matrix->indices, matrix->data, error_d,
+        user_bias, item_bias);
     cudaError_t lastError = cudaGetLastError();
     if(cudaSuccess != lastError) {
         printf("ERROR: %s\n", cudaGetErrorName(lastError));
     }
-    cudaDeviceSynchronize();
-
-    // move loss output back to host to return
-    output->to_host(loss);
-}
-
-void calculate_loss_gpu(int factors, int user_count, int item_count, int num_ratings, const float * P, const float * Q, CudaCSRMatrix* matrix, float * error_d) {
-    // Turn P and Q into CudaDenseMatrices on GPU
-    CudaDenseMatrix* P_d = new CudaDenseMatrix(user_count, factors, P);
-    CudaDenseMatrix* Q_d = new CudaDenseMatrix(item_count, factors, Q);
-    calculate_loss_gpu(P_d, Q_d, factors, user_count, item_count, num_ratings, matrix, error_d);
 }
 
 // SEQUENTIAL
