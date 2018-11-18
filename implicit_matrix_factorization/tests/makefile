@@ -1,4 +1,4 @@
-all: test_csv test_matrix test_sgd
+all: test_csv test_matrix test_loss test_sgd
 
 test_csv: create_bin
 	nvcc -std=c++11 -o bin/test_csv -arch=sm_52 ../read_csv.cu ../matrix.cu test_csv.cu
