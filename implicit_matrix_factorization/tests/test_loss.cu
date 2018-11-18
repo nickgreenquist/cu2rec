@@ -1,5 +1,6 @@
 #include <assert.h>
 #include <math.h>       /* pow */
+#include <time.h>
 
 #include "../read_csv.h"
 #include "../matrix.h"
@@ -10,6 +11,7 @@
 using namespace std;
 
 string filename = "../../data/test_ratings.csv";
+int factors = 2;
 
 void test_loss_sequential() {
     int rows, cols;
@@ -31,7 +33,6 @@ void test_loss_sequential() {
     cudaMemcpy(data, matrix->data, nonzeros * sizeof(float), cudaMemcpyDeviceToHost);
 
     // create temp P and Q
-    int factors = 2;
     int user_count = rows;
     int item_count = cols;
     float *P = new float[user_count * factors];
@@ -69,7 +70,6 @@ void test_loss() {
     cu2rec::CudaCSRMatrix* matrix = createSparseMatrix(&ratings, rows, cols);
 
     // create temp P and Q
-    int factors = 2;
     int user_count = rows;
     int item_count = cols;
     float *P = new float[user_count * factors];
@@ -103,12 +103,25 @@ void test_loss() {
 }
 
 int main() {
+    double time_taken;
+    clock_t start, end;
+
     cout << "Testing Sequential Loss Function on test ratings...";
+    start = clock();
     test_loss_sequential();
+    end = clock();
+    time_taken = ((double)(end - start))/ CLOCKS_PER_SEC;
+    cout << "FACTORS: " << factors << "\n";
+    cout << "CPU TIME TAKEN: " << time_taken << "\n";
     cout << "PASSED\n";
 
     cout << "Testing Parallel Loss Function on test ratings...";
+    start = clock();
     test_loss();
+    end = clock();
+    time_taken = ((double)(end - start))/ CLOCKS_PER_SEC;
+    cout << "FACTORS: " << factors << "\n";
+    cout << "GPU TIME TAKEN: " << time_taken << "\n";
     cout << "PASSED\n";
 
     return 0;

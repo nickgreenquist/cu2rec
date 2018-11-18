@@ -12,9 +12,10 @@
 #define index(i, j, N)  ((i)*(N)) + (j)
 
 // PARALLEL
-__global__ void loss_kernel(int factors, int user_count, int item_count, const float * P, const float * Q, const int * indptr, const int * indices, const float * data, float * output, float * error) {
-    float total_loss = 0.0;
-    for (int u = blockIdx.x; u < user_count; u += gridDim.x) {
+__global__ void loss_kernel_user(int factors, int user_count, int item_count, const float * P, const float * Q, const int * indptr, const int * indices, const float * data, float * output, float * error) {
+    // One thread per user
+    int u = blockDim.x * blockIdx.x + threadIdx.x;
+    if(u < user_count) {
         // get this user's factors
         const float * p = &P[u * factors];
 
@@ -24,19 +25,22 @@ __global__ void loss_kernel(int factors, int user_count, int item_count, const f
 
             // update loss with this rating and prediction
             float rating = data[i];
-            float pred = cu2rec::dot(Qi, p);
 
+            // TODO: remove hacky dot once we spin our own
+            //float pred = cu2rec::dot(Qi, p);
+
+            // TODO: create a better but not hacky dot function, but for now this works well
+            float pred = 0.0;
+            for (int f = 0; f < factors; f++)
+                pred += Qi[f]*p[f];
+
+            // set the error value for this rating
             error[i] = rating - pred;
+
+            // TODO: do we want to do this in kernel here, or will sgd.cu handle the square loss for each error?
             float loss = pow(rating - pred, 2);
-            total_loss += loss;
-
-            delete [] Qi;
+            // total_loss += loss;
         }
-        delete [] p;
-    }
-
-    if (threadIdx.x == 0) {
-        atomicAdd(output, total_loss);
     }
 }
 
@@ -54,11 +58,11 @@ void calculate_loss_gpu(int factors, int user_count, int item_count, int num_rat
     cudaMalloc((void **) &error_d, num_ratings * sizeof(float));
     cudaMemset(error_d, 0, num_ratings * sizeof(float));
 
-    // call the kernel with hardcoded dimensions for now
-    // TODO: input better dimensions
-    dim3 dimBlock(factors);
-    dim3 dimGrid(user_count / factors + 1);
-    loss_kernel<<<dimGrid, dimBlock>>>(
+    // Dimensions for kernel call
+    int n_threads = 32;
+    dim3 dimBlock(n_threads);
+    dim3 dimGrid(user_count / n_threads + 1);
+    loss_kernel_user<<<dimGrid, dimBlock>>>(
         factors, user_count, item_count, P_d->data, Q_d->data,
         matrix->indptr, matrix->indices, matrix->data, output->data, error_d);
     cudaError_t lastError = cudaGetLastError();
