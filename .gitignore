@@ -1,6 +1,8 @@
+bin/
 data/links.csv
 data/movies.csv
 data/ratings.csv
 data/ratings_mapped.csv
 data/README.txt
 data/tags.csv
+.persistd/
