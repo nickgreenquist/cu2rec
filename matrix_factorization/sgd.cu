@@ -23,7 +23,7 @@ __global__ void sgd_update(int *indptr, int *indices, float *P, float *Q, float 
                 float ub_update = learning_rate * (errors[y_i] - user_bias_reg * user_bias[x]);
                 user_bias_target[x] += ub_update;
                 float ib_update = learning_rate * (errors[y_i] - item_bias_reg * item_bias[y]);
-                item_bias_target[y] += ib_update;
+                atomicAdd(&item_bias_target[y], ib_update);
 
                 // Update latent factors
                 float p_update = learning_rate * errors[y_i] * Q[q_index];

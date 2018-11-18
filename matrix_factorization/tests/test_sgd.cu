@@ -87,6 +87,8 @@ void test_sgd() {
                                       item_bias_target, learning_rate, learning_rate);
     std::swap(P_device, P_device_target);
     std::swap(Q_device, Q_device_target);
+    std::swap(user_bias_device, user_bias_target);
+    std::swap(item_bias_device, item_bias_target);
 
     // Copy updated P and Q back
     float *P_updated = new float[rows * n_factors];
@@ -94,7 +96,13 @@ void test_sgd() {
     cudaMemcpy(P_updated, P_device, P_size, cudaMemcpyDeviceToHost);
     cudaMemcpy(Q_updated, Q_device, Q_size, cudaMemcpyDeviceToHost);
 
-    // Assert everything is equal
+    // Copy updated biases back
+    float *user_bias_updated = new float[rows];
+    float *item_bias_updated = new float[cols];
+    cudaMemcpy(user_bias_updated, user_bias_device, rows * sizeof(float), cudaMemcpyDeviceToHost);
+    cudaMemcpy(item_bias_updated, item_bias_device, cols * sizeof(float), cudaMemcpyDeviceToHost);
+
+    // Assert all updated components are correct
     vector<float> P_expected = {1.004, 1.003, 1.003, 1.003, 1.003, 1.002};
     vector<float> Q_expected = {1.004, 1.005, 1.004, 1.002, 1.003};
     for(int i = 0; i < rows; ++i) {
@@ -102,6 +110,17 @@ void test_sgd() {
     }
     for(int i = 0; i < cols; ++i) {
         assert(fabs(Q_expected.at(i) - Q_updated[i]) < 1e-3);
+    }
+
+    // Bias for user will be (0.000999) * num of items they have rated
+    vector<float> user_bias_expected = {1.003996, 1.002997, 1.002997, 1.002997, 1.002997, 1.001998};
+    // Bias for item will be (0.000999) * num of users have rated it
+    vector<float> item_bias_expected = {1.003996, 1.004995, 1.003996, 1.001998, 1.002997};
+    for(int i = 0; i < rows; i++) {
+        assert(fabs(user_bias_expected.at(i) - user_bias_updated[i]) < 1e-3);
+    }
+    for(int i = 0; i < cols; i++) {
+        assert(fabs(item_bias_expected.at(i) - item_bias_updated[i]) < 1e-3);
     }
 
     // Clean up
@@ -122,6 +141,8 @@ void test_sgd() {
     delete errors;
     delete [] user_bias;
     delete [] item_bias;
+    delete [] user_bias_updated;
+    delete [] item_bias_updated;
 }
 
 int main() {

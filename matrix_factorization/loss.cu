@@ -66,7 +66,6 @@ void calculate_loss_gpu(CudaDenseMatrix* P_d, CudaDenseMatrix* Q_d, int factors,
     int n_threads = 32;
     dim3 dimBlock(n_threads);
     dim3 dimGrid(user_count / n_threads + 1);
-    cudaDeviceSynchronize();
     loss_kernel<<<dimGrid, dimBlock>>>(
         factors, user_count, item_count, P_d->data, Q_d->data,
         matrix->indptr, matrix->indices, matrix->data, error_d,
@@ -75,7 +74,6 @@ void calculate_loss_gpu(CudaDenseMatrix* P_d, CudaDenseMatrix* Q_d, int factors,
     if(cudaSuccess != lastError) {
         printf("ERROR: %s\n", cudaGetErrorName(lastError));
     }
-    cudaDeviceSynchronize();
 }
 
 // SEQUENTIAL
