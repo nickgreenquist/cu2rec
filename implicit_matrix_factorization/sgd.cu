@@ -15,7 +15,7 @@ __global__ void sgd_update(int *indptr, int *indices, float *P, float *Q, float 
             int y = indices[y_i];
             for(int f = 0; f < n_factors; ++f) {
                 int p_index = index(x, f, n_factors);
-                int q_index = index(f, y, n_cols);
+                int q_index = index(y, f, n_factors);
                 // printf("User %d item %d updating P %d (%d, %d) and Q %d (%d, %d)\n", x, y, p_index, x, f, q_index, f, y);
                 float p_update = learning_rate * errors[y_i] * Q[q_index];
                 P_target[p_index] += p_update;
