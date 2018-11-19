@@ -1,5 +1,5 @@
 #include "matrix.h"
-#include "read_csv.h"
+#include "util.h"
 
 int main(int argc, char **argv){
     int rows, cols;

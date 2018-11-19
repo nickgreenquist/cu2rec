@@ -1,9 +1,13 @@
-#include "../read_csv.h"
-#include "../matrix.h"
-
+#include <iostream>     // std::cout
+#include <assert.h>
+#include <vector>
 #include <assert.h>
 
-using namespace std;
+#include "../util.h"
+#include "../matrix.h"
+
+/* To index element (i,j) of a 2D array stored as 1D */
+#define index(i, j, N)  ((i)*(N)) + (j)
 
 string filename = "../../data/test_ratings.csv";
 
@@ -16,6 +20,52 @@ vector<Rating> test_read_csv() {
     assert(ratings.size() == 18);
 
     return ratings;
+}
+
+void test_output() {
+    int user_count = 6;
+    int item_count = 5;
+    int factors = 2;
+
+    float *P = new float[user_count * factors];
+    for(int i = 0; i < user_count * factors; i++) {
+        P[i] = 1.0;
+    }
+    
+    float *Q = new float[item_count * factors];
+    for(int i = 0; i < item_count * factors; i++) {
+        Q[i] = 1.0;
+    }
+
+    float *user_bias = new float[user_count];
+    for(int i = 0; i < user_count; i++) {
+        user_bias[i] = 1.0;
+    }
+
+    float *item_bias = new float[item_count];
+    for(int i = 0; i < item_count; i++) {
+        item_bias[i] = 1.0;
+    }
+
+    float *global_bias = new float[1];
+    global_bias[0] = 1.0;
+
+    // Get filepath without extension
+    size_t lastindex = filename.find_last_of("."); 
+    string filepath = filename.substr(0, lastindex); 
+
+    // Write components to file
+    writeToFile(filepath, "csv", "p", P, user_count, factors, factors);
+    writeToFile(filepath, "csv", "q", Q, item_count, factors, factors);
+    writeToFile(filepath, "csv", "user_bias", user_bias, user_count, 1, factors);
+    writeToFile(filepath, "csv", "item_bias", item_bias, item_count, 1, factors);
+    writeToFile(filepath, "csv", "global_bias", global_bias, 1, 1, factors);
+
+    // Free memory
+    delete [] P;
+    delete [] Q;
+    delete [] user_bias;
+    delete [] item_bias;
 }
 
 void test_sparse_matrix() {
@@ -66,6 +116,10 @@ int main() {
 
     cout << "Testing Sparse Matrix is Created correctly...";
     test_sparse_matrix();
+    cout << "PASSED\n";
+
+    cout << "Testing writing components to files...\n";
+    test_output();
     cout << "PASSED\n";
 
     return 0;
