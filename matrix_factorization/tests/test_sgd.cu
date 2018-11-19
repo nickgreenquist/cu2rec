@@ -13,7 +13,8 @@ string filename = "../../data/test_ratings.csv";
 void test_sgd() {
     // Initalize the input matrix
     int rows, cols;
-    vector<Rating> ratings = readCSV(filename, &rows, &cols);
+    float global_bias;
+    vector<Rating> ratings = readCSV(filename, &rows, &cols, &global_bias);
     CudaCSRMatrix* matrix = createSparseMatrix(&ratings, rows, cols);
 
     // Hyperparams

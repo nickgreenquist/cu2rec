@@ -13,11 +13,12 @@ string filename = "../../data/test_ratings.csv";
 
 vector<Rating> test_read_csv() {
     int rows, cols;
-
-    vector<Rating> ratings = readCSV(filename, &rows, &cols);
+    float global_bias;
+    vector<Rating> ratings = readCSV(filename, &rows, &cols, &global_bias);
     assert(rows == 6);
     assert(cols == 5);
     assert(ratings.size() == 18);
+    assert(fabs(global_bias - 3.5555555555555) < 1e-3);
 
     return ratings;
 }
@@ -71,7 +72,8 @@ void test_output() {
 void test_sparse_matrix() {
     // Reread CSV so this test is self contained
     int rows, cols;
-    vector<Rating> ratings = readCSV(filename, &rows, &cols);
+    float global_bias;
+    vector<Rating> ratings = readCSV(filename, &rows, &cols, &global_bias);
 
     // Create Sparse Matrix in Device memory
     cu2rec::CudaCSRMatrix* matrix = createSparseMatrix(&ratings, rows, cols);

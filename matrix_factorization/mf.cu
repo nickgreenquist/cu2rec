@@ -3,7 +3,8 @@
 
 int main(int argc, char **argv){
     int rows, cols;
-    std::vector<Rating> ratings = readCSV(argv[1], &rows, &cols);
+    float global_bias;
+    std::vector<Rating> ratings = readCSV(argv[1], &rows, &cols, &global_bias);
     printCSV(&ratings);
 
     // Create Sparse Matrix in Device memory

@@ -15,7 +15,8 @@ int factors = 2;
 
 void test_loss_sequential() {
     int rows, cols;
-    vector<Rating> ratings = readCSV(filename, &rows, &cols);
+    float global_bias;
+    vector<Rating> ratings = readCSV(filename, &rows, &cols, &global_bias);
 
     // Create Sparse Matrix in Device memory
     cu2rec::CudaCSRMatrix* matrix = createSparseMatrix(&ratings, rows, cols);
@@ -64,7 +65,11 @@ void test_loss_sequential() {
 
 void test_loss() {
     int rows, cols;
-    vector<Rating> ratings = readCSV(filename, &rows, &cols);
+    float global_bias;
+    vector<Rating> ratings = readCSV(filename, &rows, &cols, &global_bias);
+
+    // set global_bias to 1.0 for easier testing
+    global_bias = 1.0;
 
     // Create Sparse Matrix in Device memory
     cu2rec::CudaCSRMatrix* matrix = createSparseMatrix(&ratings, rows, cols);
@@ -110,7 +115,7 @@ void test_loss() {
     // Turn P and Q into CudaDenseMatrices on GPU and calculate the loss using GPU
     CudaDenseMatrix* P_d = new CudaDenseMatrix(user_count, factors, P);
     CudaDenseMatrix* Q_d = new CudaDenseMatrix(item_count, factors, Q);
-    calculate_loss_gpu(P_d, Q_d, factors, user_count, item_count, ratings.size(), matrix, error_d, user_bias_device, item_bias_device);
+    calculate_loss_gpu(P_d, Q_d, factors, user_count, item_count, ratings.size(), matrix, error_d, user_bias_device, item_bias_device, global_bias);
 
     // move array of errors back to host
     cudaMemcpy(error, error_d, ratings.size() * sizeof(float), cudaMemcpyDeviceToHost);
@@ -121,7 +126,7 @@ void test_loss() {
     }
 
     cout << "\nLoss: " << loss << "\n";
-    assert(loss == 40.0);
+    assert(loss == 74.0);
 
     //free memory
     delete matrix;

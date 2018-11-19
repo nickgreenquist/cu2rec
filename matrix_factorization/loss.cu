@@ -15,7 +15,7 @@ using namespace cu2rec;
 
 // PARALLEL
 __global__ void loss_kernel(int factors, int user_count, int item_count, const float * P, const float * Q, const int * indptr, 
-                            const int * indices, const float * data, float * error, float * user_bias, float * item_bias) {
+                            const int * indices, const float * data, float * error, float * user_bias, float * item_bias, float global_bias) {
     // One thread per user
     int u = blockDim.x * blockIdx.x + threadIdx.x;
     if(u < user_count) {
@@ -31,8 +31,7 @@ __global__ void loss_kernel(int factors, int user_count, int item_count, const f
             float rating = data[i];
 
             // calculate predicted rating
-            // TODO: add global bias
-            float pred = user_bias[u] + item_bias[item_id];
+            float pred = global_bias + user_bias[u] + item_bias[item_id];
             for (int f = 0; f < factors; f++)
                 pred += Qi[f]*p[f];
 
@@ -62,14 +61,14 @@ __global__ void total_loss_kernel(float *errors, float *losses, int n_errors, in
 }
 
 void calculate_loss_gpu(CudaDenseMatrix* P_d, CudaDenseMatrix* Q_d, int factors, int user_count, int item_count, int num_ratings, 
-                        CudaCSRMatrix* matrix, float * error_d, float * user_bias,  float * item_bias) {
+                        CudaCSRMatrix* matrix, float * error_d, float * user_bias,  float * item_bias, float global_bias) {
     int n_threads = 32;
     dim3 dimBlock(n_threads);
     dim3 dimGrid(user_count / n_threads + 1);
     loss_kernel<<<dimGrid, dimBlock>>>(
         factors, user_count, item_count, P_d->data, Q_d->data,
         matrix->indptr, matrix->indices, matrix->data, error_d,
-        user_bias, item_bias);
+        user_bias, item_bias, global_bias);
     cudaError_t lastError = cudaGetLastError();
     if(cudaSuccess != lastError) {
         printf("ERROR: %s\n", cudaGetErrorName(lastError));

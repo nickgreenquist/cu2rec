@@ -16,7 +16,8 @@ string filename = "../../data/test_ratings.csv";
 void test_training_loop() {
     // Initalize the input matrix
     int rows, cols;
-    vector<Rating> ratings = readCSV(filename, &rows, &cols);
+    float global_bias;
+    vector<Rating> ratings = readCSV(filename, &rows, &cols, &global_bias);
     CudaCSRMatrix* matrix = createSparseMatrix(&ratings, rows, cols);
 
     // Hyperparams
@@ -27,7 +28,7 @@ void test_training_loop() {
 
     float *P, *Q, *losses, *user_bias, *item_bias;
 
-    train(matrix, n_iterations, n_factors, learning_rate, seed, &P, &Q, &losses, &user_bias, &item_bias);
+    train(matrix, n_iterations, n_factors, learning_rate, seed, &P, &Q, &losses, &user_bias, &item_bias, global_bias);
 
     cout << "Losses: ";
     for(int i = 0; i < n_iterations; ++i) {

@@ -31,9 +31,10 @@ void printCSV(std::vector<Rating> *ratings) {
     }
 }
 
-std::vector<Rating> readCSV(std::string filename, int *rows, int *cols) {
+std::vector<Rating> readCSV(std::string filename, int *rows, int *cols, float *global_bias) {
     int max_row = 0;
     int max_col = 0;
+    float sum_ratings = 0;
     std::ifstream ratingsFile(filename);
     std::vector<Rating> ratings;
 
@@ -49,9 +50,11 @@ std::vector<Rating> readCSV(std::string filename, int *rows, int *cols) {
             ratings.push_back({userID - 1, itemID - 1, rating});
             max_row = std::max(userID, max_row);
             max_col = std::max(itemID, max_col);
+            sum_ratings += rating;
         }
         *rows = max_row;
         *cols = max_col;
+        *global_bias = sum_ratings / (1.0 * ratings.size());
         return ratings;
     }
     else{
