@@ -38,24 +38,6 @@ void test_training_loop() {
 
     assert(losses[0] >= losses[n_iterations - 1]);
 
-    // Write updated P and Q to file
-    char filename_char[filename.length()+1];  
-    strcpy(filename_char, filename.c_str());
-    char p_filename [255];
-    string test_filename = "test_output.csv";
-    sprintf(p_filename, "%s_%d_p.txt", test_filename.c_str(), n_factors);
-
-    FILE *fp;
-    fp = fopen(p_filename, "w");
-    for(int u = 0; u < rows; u++) {
-        for(int f = 0; f < n_factors - 1; f++) {
-            fprintf(fp, "%f,", P[index(u, f, n_factors)]);
-        }
-        fprintf(fp, "%f", P[index(u, n_factors - 1, n_factors)]);
-        fprintf(fp, "\n");
-    }
-    fclose(fp);
-
     // Free memory
     delete [] P;
     delete [] Q;
