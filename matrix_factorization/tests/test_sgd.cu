@@ -89,7 +89,7 @@ void test_sgd() {
     dim3 dimGrid(rows / n_threads + 1);
     sgd_update<<<dimGrid, dimBlock>>>(matrix->indptr, matrix->indices, P_device, Q_device, P_device_target, Q_device_target, n_factors,
                                       errors_device, rows, cols, learning_rate, user_bias_device, item_bias_device, user_bias_target,
-                                      item_bias_target, user_bias_reg, item_bias_reg, P_reg, Q_reg);
+                                      item_bias_target, P_reg, Q_reg, user_bias_reg, item_bias_reg);
     std::swap(P_device, P_device_target);
     std::swap(Q_device, Q_device_target);
     std::swap(user_bias_device, user_bias_target);

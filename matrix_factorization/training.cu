@@ -30,7 +30,8 @@ float *initialize_normal_array(int size) {
 }
 
 void train(CudaCSRMatrix* matrix, int n_iterations, int n_factors, float learning_rate, int seed,
-           float **P_ptr, float **Q_ptr, float **losses_ptr, float **user_bias_ptr, float **item_bias_ptr, float global_bias) {
+           float **P_ptr, float **Q_ptr, float **losses_ptr, float **user_bias_ptr, float **item_bias_ptr, float global_bias,
+           float P_reg, float Q_reg, float user_bias_reg, float item_bias_reg) {
     int user_count = matrix->rows;
     int item_count = matrix->cols;
 
@@ -94,7 +95,7 @@ void train(CudaCSRMatrix* matrix, int n_iterations, int n_factors, float learnin
         sgd_update<<<dim_grid_sgd, dim_block>>>(matrix->indptr, matrix->indices, P_device->data, Q_device->data,
                                                 P_device_target->data, Q_device_target->data, n_factors, errors_device,
                                                 user_count, item_count, learning_rate, user_bias_device, item_bias_device,
-                                                user_bias_target, item_bias_target, learning_rate, learning_rate);
+                                                user_bias_target, item_bias_target, P_reg, Q_reg, user_bias_reg, item_bias_reg);
         lastError = cudaGetLastError();
         if(cudaSuccess != lastError) {
             printf("ERROR: %s\n", cudaGetErrorName(lastError));

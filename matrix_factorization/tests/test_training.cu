@@ -25,10 +25,15 @@ void test_training_loop() {
     int n_iterations = 10;
     int seed = 42;
     float learning_rate = 1e-3;
+    float P_reg = 1e-1;
+    float Q_reg = 1e-1;
+    float user_bias_reg = 1e-1;
+    float item_bias_reg = 1e-1;
 
     float *P, *Q, *losses, *user_bias, *item_bias;
 
-    train(matrix, n_iterations, n_factors, learning_rate, seed, &P, &Q, &losses, &user_bias, &item_bias, global_bias);
+    train(matrix, n_iterations, n_factors, learning_rate, seed, &P, &Q, &losses, &user_bias, &item_bias, global_bias,
+          P_reg, Q_reg, user_bias_reg, item_bias_reg);
 
     cout << "Losses: ";
     for(int i = 0; i < n_iterations; ++i) {
