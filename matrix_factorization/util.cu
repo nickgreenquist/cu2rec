@@ -1,5 +1,22 @@
+#include "util.h"
 
-#include "read_csv.h"
+using namespace std;
+
+void writeToFile(string filepath, string extension, string component, float *data, int rows, int cols, int factors) {
+    char filename [255];
+    sprintf(filename, "%s_%d_%s.%s", filepath.c_str(), factors, component.c_str(), extension.c_str());
+
+    FILE *fp;
+    fp = fopen(filename, "w");
+    for(int i = 0; i < rows; i++) {
+        for(int j = 0; j < cols - 1; j++) {
+            fprintf(fp, "%f,", data[index(i, j, cols)]);
+        }
+        fprintf(fp, "%f", data[index(i, cols - 1, cols)]);
+        fprintf(fp, "\n");
+    }
+    fclose(fp);
+}
 
 //function to print info
 void printRating(Rating r){
@@ -70,3 +87,4 @@ cu2rec::CudaCSRMatrix* createSparseMatrix(std::vector<Rating> *ratings, int rows
 
     return matrix;
 }
+

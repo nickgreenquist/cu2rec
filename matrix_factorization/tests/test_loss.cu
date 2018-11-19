@@ -2,7 +2,7 @@
 #include <math.h>       /* pow */
 #include <time.h>
 
-#include "../read_csv.h"
+#include "../util.h"
 #include "../matrix.h"
 #include "../loss.h"
 
