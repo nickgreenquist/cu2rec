@@ -7,7 +7,8 @@
 
 __global__ void sgd_update(int *indptr, int *indices, float *P, float *Q, float *P_target, float *Q_target, int n_factors, 
                            float *errors, int n_rows, int n_cols, float learning_rate, float *user_bias, float *item_bias,
-                           float *user_bias_target, float *item_bias_target, float user_bias_reg, float item_bias_reg) {
+                           float *user_bias_target, float *item_bias_target, float user_bias_reg, float item_bias_reg,
+                           float P_reg, float Q_reg) {
     // One thread per user
     int x = blockDim.x * blockIdx.x + threadIdx.x;
     if(x < n_rows) {
@@ -26,9 +27,9 @@ __global__ void sgd_update(int *indptr, int *indices, float *P, float *Q, float 
                 atomicAdd(&item_bias_target[y], ib_update);
 
                 // Update latent factors
-                float p_update = learning_rate * errors[y_i] * Q[q_index];
+                float p_update = learning_rate * (errors[y_i] * Q[q_index] - P_reg * P[p_index]);
                 P_target[p_index] += p_update;
-                float q_update = learning_rate * errors[y_i] * P[p_index];
+                float q_update = learning_rate * (errors[y_i] * P[p_index] - Q_reg * Q[q_index]);
                 atomicAdd(&Q_target[q_index], q_update);
             }
         }
