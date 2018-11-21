@@ -1,6 +1,7 @@
 #include "matrix.h"
 #include "util.h"
 #include "training.h"
+#include "loss.h"
 
 int main(int argc, char **argv){
     if(argc < 2) {
@@ -16,7 +17,7 @@ int main(int argc, char **argv){
 
     // Hyperparams
     int n_factors = 2;
-    int n_iterations = 200;
+    int n_iterations = 1000;
     int seed = 42;
     float learning_rate = 1e-3;
     float P_reg = 1e-1;
@@ -28,14 +29,6 @@ int main(int argc, char **argv){
     float *P, *Q, *losses, *user_bias, *item_bias;
     train(matrix, n_iterations, n_factors, learning_rate, seed, &P, &Q, &losses, &user_bias, &item_bias, global_bias,
           P_reg, Q_reg, user_bias_reg, item_bias_reg);
-
-    // Output loss every 10th iteration
-    cout << "Loss:\n";
-    for(int i = 0; i < n_iterations; ++i) {
-        if((i + 1) % 10 == 0) {
-            cout << "Iteration " << i + 1 << ": " << losses[i] << "\n";
-        }
-    }
 
     // Write output to files
     size_t lastindex = filename.find_last_of("."); 

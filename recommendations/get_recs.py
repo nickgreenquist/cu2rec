@@ -1,9 +1,9 @@
 import numpy as np
 import csv
 
-filename = "../data/test_ratings2"
+filename = "../data/test_ratings3"
 # Load in sparse ratings as dense matrix (hardcode dimensions for now)
-rows = 6
+rows = 8
 cols = 5
 n_factors = 2
 ratings = [[0.0]*cols for i in range(rows)]
@@ -59,9 +59,8 @@ print(ratings)
 print()
 for u in range(rows):
     for i in range(cols):
-        if ratings[u][i] == 0.0:
-            pred = global_bias + user_bias[u] + item_bias[i] + np.dot(np.transpose(P[u]), Q[i])
-            ratings[u][i] = pred
+        pred = global_bias + user_bias[u] + item_bias[i] + np.dot(P[u], Q[i])
+        ratings[u][i] = pred
 
 np.set_printoptions(precision=2)
 print("Predicted Ratings:")

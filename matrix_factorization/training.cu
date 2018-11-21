@@ -4,6 +4,8 @@
 #include "matrix.h"
 #include "sgd.h"
 
+#define index(i, j, N)  ((i)*(N)) + (j)
+
 using namespace cu2rec;
 using namespace std;
 
@@ -146,6 +148,13 @@ void train(CudaCSRMatrix* matrix, int n_iterations, int n_factors, float learnin
         // Swap old and new bias arrays
         swap(user_bias_device, user_bias_target);
         swap(item_bias_device, item_bias_target);
+
+        // Output current loss for this iteration
+        // WARNING - SLOW: Remove after debugging due to cudaMemcpy just for printing loss
+        if((i + 1) % 10 == 0) {
+            cudaMemcpy(losses, losses_device, n_iterations * sizeof(float), cudaMemcpyDeviceToHost);
+            cout << "Loss for Iteration " << i + 1 << ": " << losses[i] << "\n";
+        }
     }
     
     // Copy array of losses back to host
@@ -159,6 +168,28 @@ void train(CudaCSRMatrix* matrix, int n_iterations, int n_factors, float learnin
     cudaMemcpy(user_bias, user_bias_device, user_count * sizeof(float), cudaMemcpyDeviceToHost);
     cudaMemcpy(item_bias, item_bias_device, item_count * sizeof(float), cudaMemcpyDeviceToHost);
 
+    // TODO: Remove after debugging issue with outputting components
+    // Output final loss and final components to verify results
+    float *predictions = new float[user_count * item_count];
+    for(int u = 0; u < user_count; u++) {
+        const float * p = &P[u * n_factors];
+        for(int i = 0; i < item_count; i++) {
+            const float * Qi = &Q[i * n_factors];
+            float pred = global_bias + user_bias[u] + item_bias[i];
+            for (int f = 0; f < n_factors; f++)
+                pred += Qi[f]*p[f];
+            predictions[index(u, i, item_count)] = pred;
+        }
+    }
+    cout << "Predictions: " <<  "\n";
+    for(int u = 0; u < user_count; u++) {
+        cout << "[";
+        for(int i = 0; i < item_count; i++) {
+            cout << predictions[index(u, i, item_count)] << ", ";
+        }
+        cout << "]\n";
+    }
+
     // Free memory
     cudaFree(errors_device);
     cudaFree(losses_device);
@@ -170,4 +201,7 @@ void train(CudaCSRMatrix* matrix, int n_iterations, int n_factors, float learnin
     delete P_device_target;
     delete Q_device;
     delete Q_device_target;
+
+    // TODO: remove after debugging issues with outputting components
+    delete [] predictions;
 }
