@@ -108,10 +108,14 @@ void train(CudaCSRMatrix* matrix, int n_iterations, int n_factors, float learnin
 
         // Calculate total loss to check for improving loss
         total_loss_kernel<<<dim_grid_loss, dim_block>>>(errors_device, losses_device, matrix->nonzeros, i, 1);
-        total_loss_kernel<<<dim_grid_P_reg_loss, dim_block>>>(P_device->data, losses_device, P_device->rows * P_device->cols, i, P_reg);
-        total_loss_kernel<<<dim_grid_Q_reg_loss, dim_block>>>(Q_device->data, losses_device, Q_device->rows * Q_device->cols, i, Q_reg);
-        total_loss_kernel<<<dim_grid_user_bias_reg_loss, dim_block>>>(user_bias_device, losses_device, user_count, i, user_bias_reg);
-        total_loss_kernel<<<dim_grid_item_bias_reg_loss, dim_block>>>(item_bias_device, losses_device, item_count, i, item_bias_reg);
+        if(P_reg > 0)
+            total_loss_kernel<<<dim_grid_P_reg_loss, dim_block>>>(P_device->data, losses_device, P_device->rows * P_device->cols, i, P_reg);
+        if(Q_reg > 0)
+            total_loss_kernel<<<dim_grid_Q_reg_loss, dim_block>>>(Q_device->data, losses_device, Q_device->rows * Q_device->cols, i, Q_reg);
+        if(user_bias_reg > 0)
+            total_loss_kernel<<<dim_grid_user_bias_reg_loss, dim_block>>>(user_bias_device, losses_device, user_count, i, user_bias_reg);
+        if(item_bias_reg > 0)
+            total_loss_kernel<<<dim_grid_item_bias_reg_loss, dim_block>>>(item_bias_device, losses_device, item_count, i, item_bias_reg);
 
         lastError = cudaGetLastError();
         if(cudaSuccess != lastError) {
@@ -121,10 +125,14 @@ void train(CudaCSRMatrix* matrix, int n_iterations, int n_factors, float learnin
         // The loss kernels modify P, Q, user_bias, and item_bias
         // Copy them back
         // TODO: avoid this entirely
-        cudaMemcpy(P_device->data, P_device_target->data, user_count * n_factors * sizeof(float), cudaMemcpyDeviceToDevice);
-        cudaMemcpy(Q_device->data, Q_device_target->data, item_count * n_factors * sizeof(float), cudaMemcpyDeviceToDevice);
-        cudaMemcpy(user_bias_device, user_bias_target, user_count * sizeof(float), cudaMemcpyDeviceToDevice);
-        cudaMemcpy(item_bias_device, item_bias_target, item_count * sizeof(float), cudaMemcpyDeviceToDevice);
+        if(P_reg > 0)
+            cudaMemcpy(P_device->data, P_device_target->data, user_count * n_factors * sizeof(float), cudaMemcpyDeviceToDevice);
+        if(Q_reg > 0)
+            cudaMemcpy(Q_device->data, Q_device_target->data, item_count * n_factors * sizeof(float), cudaMemcpyDeviceToDevice);
+        if(user_bias_reg > 0)
+            cudaMemcpy(user_bias_device, user_bias_target, user_count * sizeof(float), cudaMemcpyDeviceToDevice);
+        if(item_bias_reg > 0)
+            cudaMemcpy(item_bias_device, item_bias_target, item_count * sizeof(float), cudaMemcpyDeviceToDevice);
 
         lastError = cudaGetLastError();
         if(cudaSuccess != lastError) {
