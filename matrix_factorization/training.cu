@@ -56,6 +56,7 @@ void train(CudaCSRMatrix* matrix, int n_iterations, int n_factors, float learnin
     // Create the total losses
     float *losses_device;
     cudaMalloc(&losses_device, n_iterations * sizeof(float));
+    cudaMemset(losses_device, 0, n_iterations * sizeof(float));
 
     // Create the bias arrays
     float *user_bias = initialize_normal_array(user_count);
@@ -83,6 +84,10 @@ void train(CudaCSRMatrix* matrix, int n_iterations, int n_factors, float learnin
     dim3 dim_block(n_threads);
     dim3 dim_grid_sgd(user_count / n_threads + 1);
     dim3 dim_grid_loss(matrix->nonzeros / n_threads + 1);
+    dim3 dim_grid_P_reg_loss(P_device->rows * P_device->cols / n_threads + 1);
+    dim3 dim_grid_Q_reg_loss(Q_device->rows * Q_device->cols / n_threads + 1);
+    dim3 dim_grid_user_bias_reg_loss(user_count / n_threads + 1);
+    dim3 dim_grid_item_bias_reg_loss(item_count / n_threads + 1);
 
     // Training loop
     cudaError_t lastError;
@@ -102,7 +107,25 @@ void train(CudaCSRMatrix* matrix, int n_iterations, int n_factors, float learnin
         }
 
         // Calculate total loss to check for improving loss
-        total_loss_kernel<<<dim_grid_loss, dim_block>>>(errors_device, losses_device, matrix->nonzeros, i);
+        total_loss_kernel<<<dim_grid_loss, dim_block>>>(errors_device, losses_device, matrix->nonzeros, i, 1);
+        total_loss_kernel<<<dim_grid_P_reg_loss, dim_block>>>(P_device->data, losses_device, P_device->rows * P_device->cols, i, P_reg);
+        total_loss_kernel<<<dim_grid_Q_reg_loss, dim_block>>>(Q_device->data, losses_device, Q_device->rows * Q_device->cols, i, Q_reg);
+        total_loss_kernel<<<dim_grid_user_bias_reg_loss, dim_block>>>(user_bias_device, losses_device, user_count, i, user_bias_reg);
+        total_loss_kernel<<<dim_grid_item_bias_reg_loss, dim_block>>>(item_bias_device, losses_device, item_count, i, item_bias_reg);
+
+        lastError = cudaGetLastError();
+        if(cudaSuccess != lastError) {
+            printf("ERROR: %s\n", cudaGetErrorName(lastError));
+        }
+
+        // The loss kernels modify P, Q, user_bias, and item_bias
+        // Copy them back
+        // TODO: avoid this entirely
+        cudaMemcpy(P_device->data, P_device_target->data, user_count * n_factors * sizeof(float), cudaMemcpyDeviceToDevice);
+        cudaMemcpy(Q_device->data, Q_device_target->data, item_count * n_factors * sizeof(float), cudaMemcpyDeviceToDevice);
+        cudaMemcpy(user_bias_device, user_bias_target, user_count * sizeof(float), cudaMemcpyDeviceToDevice);
+        cudaMemcpy(item_bias_device, item_bias_target, item_count * sizeof(float), cudaMemcpyDeviceToDevice);
+
         lastError = cudaGetLastError();
         if(cudaSuccess != lastError) {
             printf("ERROR: %s\n", cudaGetErrorName(lastError));

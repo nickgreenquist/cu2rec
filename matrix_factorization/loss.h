@@ -9,7 +9,7 @@
 using namespace cu2rec;
 
 // kernel headers
-__global__ void total_loss_kernel(float *errors, float *losses, int n_errors, int current_iter);
+__global__ void total_loss_kernel(float *errors, float *losses, int n_errors, int current_iter, float discount);
 
 // function headers
 void calculate_loss_gpu(CudaDenseMatrix* P_d, CudaDenseMatrix* Q_d, int factors, int user_count, int item_count, int num_ratings, CudaCSRMatrix* matrix, float * error_d, float * user_bias, float * item_bias, float global_bias);

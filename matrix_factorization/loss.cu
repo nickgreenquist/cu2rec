@@ -41,7 +41,7 @@ __global__ void loss_kernel(int factors, int user_count, int item_count, const f
     }
 }
 
-__global__ void total_loss_kernel(float *errors, float *losses, int n_errors, int current_iter) {
+__global__ void total_loss_kernel(float *errors, float *losses, int n_errors, int current_iter, float discount) {
     int x = blockDim.x * blockIdx.x + threadIdx.x;
     for(int i = n_errors / 2; i > 0; i >>= 1) {
         __syncthreads();
@@ -56,7 +56,8 @@ __global__ void total_loss_kernel(float *errors, float *losses, int n_errors, in
         }
     }
     if(x == 0) {
-        losses[current_iter] = errors[0];
+        // Doing this atomic, in case we want to parallelize this calculation using streams
+        atomicAdd(&losses[current_iter], discount * errors[0]);
     }
 }
 
