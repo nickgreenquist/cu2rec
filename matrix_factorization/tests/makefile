@@ -1,5 +1,12 @@
 all: test_matrix test_loss test_sgd test_training test_util
 
+run_all:
+	@bin/test_matrix 1>/dev/null || echo "test_matrix failed!"
+	@bin/test_loss 1>/dev/null || echo "test_loss failed!"
+	@bin/test_sgd 1>/dev/null || echo "test_sgd failed!"
+	@bin/test_training 1>/dev/null || echo "test_training failed!"
+	@bin/test_util 1>/dev/null || echo "test_util failed!"
+
 test_matrix: create_bin
 	nvcc -std=c++11 -o bin/test_matrix -arch=sm_52 ../util.cu ../matrix.cu test_matrix.cu
 

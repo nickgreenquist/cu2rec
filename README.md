@@ -13,4 +13,5 @@
 ## Running Tests
 1. `cd tests`
 2. `make`
-2. `./test_{}`
+3. If you want to run all tests, `make run_all`
+4. Otherwise, `bin/test_{}`
