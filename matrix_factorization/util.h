@@ -18,8 +18,20 @@ struct Rating
     float rating;
 };
 
+// File read and write utils
+
+std::vector<Rating> readCSV(std::string filename, int *rows, int *cols, float *global_bias);
+void writeToFile(string parent_dir, string base_filename, string extension, string component, float *data, int rows, int cols, int factors);
+
+// Print utils
+
 void printRating(Rating r);
 void printCSV(std::vector<Rating> *ratings);
-std::vector<Rating> readCSV(std::string filename, int *rows, int *cols, float *global_bias);
+
+// Array and matrix utils
+
+float* initialize_normal_array(int size, float mean, float stddev, int seed);
+float* initialize_normal_array(int size, float mean, float stddev);
+float* initialize_normal_array(int size, int seed);
+float *initialize_normal_array(int size);
 cu2rec::CudaCSRMatrix* createSparseMatrix(std::vector<Rating> *ratings, int rows, int cols);
-void writeToFile(string parent_dir, string base_filename, string extension, string component, float *data, int rows, int cols, int factors);

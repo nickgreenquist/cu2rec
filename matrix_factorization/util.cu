@@ -2,34 +2,7 @@
 
 using namespace std;
 
-void writeToFile(string parent_dir, string base_filename, string extension, string component, float *data, int rows, int cols, int factors) {
-    char filename [255];
-    sprintf(filename, "%s/%s_f%d_%s.%s", parent_dir.c_str(), base_filename.c_str(), factors, component.c_str(), extension.c_str());
-
-    FILE *fp;
-    fp = fopen(filename, "w");
-    for(int i = 0; i < rows; i++) {
-        for(int j = 0; j < cols - 1; j++) {
-            fprintf(fp, "%f,", data[index(i, j, cols)]);
-        }
-        fprintf(fp, "%f", data[index(i, cols - 1, cols)]);
-        fprintf(fp, "\n");
-    }
-    fclose(fp);
-}
-
-//function to print info
-void printRating(Rating r){
-    std::cout << r.userID << "  "<< r.itemID <<"  "<< r.rating << "\n";
-}
-
-void printCSV(std::vector<Rating> *ratings) {
-    // Print the vector
-    std::cout  << "UserID" << "   ItemID" << "   Rating\n";
-    for (int x(0); x < ratings->size(); ++x){
-        printRating(ratings->at(x));
-    }
-}
+// File read and write utils
 
 std::vector<Rating> readCSV(std::string filename, int *rows, int *cols, float *global_bias) {
     int max_row = 0;
@@ -61,6 +34,60 @@ std::vector<Rating> readCSV(std::string filename, int *rows, int *cols, float *g
         std::cerr<<"ERROR: The file isnt open.\n";
         return ratings;
     }
+}
+
+void writeToFile(string parent_dir, string base_filename, string extension, string component, float *data, int rows, int cols, int factors) {
+    char filename [255];
+    sprintf(filename, "%s/%s_f%d_%s.%s", parent_dir.c_str(), base_filename.c_str(), factors, component.c_str(), extension.c_str());
+
+    FILE *fp;
+    fp = fopen(filename, "w");
+    for(int i = 0; i < rows; i++) {
+        for(int j = 0; j < cols - 1; j++) {
+            fprintf(fp, "%f,", data[index(i, j, cols)]);
+        }
+        fprintf(fp, "%f", data[index(i, cols - 1, cols)]);
+        fprintf(fp, "\n");
+    }
+    fclose(fp);
+}
+
+// Print utils
+
+void printRating(Rating r){
+    std::cout << r.userID << "  "<< r.itemID <<"  "<< r.rating << "\n";
+}
+
+void printCSV(std::vector<Rating> *ratings) {
+    // Print the vector
+    std::cout  << "UserID" << "   ItemID" << "   Rating\n";
+    for (int x(0); x < ratings->size(); ++x){
+        printRating(ratings->at(x));
+    }
+}
+
+// Array and matrix utils
+
+float* initialize_normal_array(int size, float mean, float stddev, int seed) {
+    mt19937 generator(seed);
+    normal_distribution<float> distribution(mean, stddev);
+    float *array = new float[size];
+    for(int i = 0; i < size; ++i) {
+        array[i] = distribution(generator);
+    }
+    return array;
+}
+
+float* initialize_normal_array(int size, float mean, float stddev) {
+    return initialize_normal_array(size, mean, stddev, 42);
+}
+
+float* initialize_normal_array(int size, int seed) {
+    return initialize_normal_array(size, 0, 1, seed);
+}
+
+float *initialize_normal_array(int size) {
+    return initialize_normal_array(size, 0, 1);
 }
 
 cu2rec::CudaCSRMatrix* createSparseMatrix(std::vector<Rating> *ratings, int rows, int cols) {

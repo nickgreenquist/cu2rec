@@ -3,33 +3,12 @@
 #include "loss.h"
 #include "matrix.h"
 #include "sgd.h"
+#include "util.h"
 
 #define index(i, j, N)  ((i)*(N)) + (j)
 
 using namespace cu2rec;
 using namespace std;
-
-float* initialize_normal_array(int size, float mean, float stddev, int seed) {
-    mt19937 generator(seed);
-    normal_distribution<float> distribution(mean, stddev);
-    float *array = new float[size];
-    for(int i = 0; i < size; ++i) {
-        array[i] = distribution(generator);
-    }
-    return array;
-}
-
-float* initialize_normal_array(int size, float mean, float stddev) {
-    return initialize_normal_array(size, mean, stddev, 42);
-}
-
-float* initialize_normal_array(int size, int seed) {
-    return initialize_normal_array(size, 0, 1, seed);
-}
-
-float *initialize_normal_array(int size) {
-    return initialize_normal_array(size, 0, 1);
-}
 
 void train(CudaCSRMatrix* matrix, int n_iterations, int n_factors, float learning_rate, int seed,
            float **P_ptr, float **Q_ptr, float **losses_ptr, float **user_bias_ptr, float **item_bias_ptr, float global_bias,
