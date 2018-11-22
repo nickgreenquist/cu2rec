@@ -36,12 +36,9 @@ std::vector<Rating> readCSV(std::string filename, int *rows, int *cols, float *g
     }
 }
 
-void writeToFile(string parent_dir, string base_filename, string extension, string component, float *data, int rows, int cols, int factors) {
-    char filename [255];
-    sprintf(filename, "%s/%s_f%d_%s.%s", parent_dir.c_str(), base_filename.c_str(), factors, component.c_str(), extension.c_str());
-
+void writeCSV(char *file_path, float *data, int rows, int cols) {
     FILE *fp;
-    fp = fopen(filename, "w");
+    fp = fopen(file_path, "w");
     for(int i = 0; i < rows; i++) {
         for(int j = 0; j < cols - 1; j++) {
             fprintf(fp, "%f,", data[index(i, j, cols)]);
@@ -50,6 +47,12 @@ void writeToFile(string parent_dir, string base_filename, string extension, stri
         fprintf(fp, "\n");
     }
     fclose(fp);
+}
+
+void writeToFile(string parent_dir, string base_filename, string extension, string component, float *data, int rows, int cols, int factors) {
+    char filename [255];
+    sprintf(filename, "%s/%s_f%d_%s.%s", parent_dir.c_str(), base_filename.c_str(), factors, component.c_str(), extension.c_str());
+    writeCSV(filename, data, rows, cols);
 }
 
 // Print utils
