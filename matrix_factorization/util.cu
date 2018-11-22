@@ -2,9 +2,9 @@
 
 using namespace std;
 
-void writeToFile(string filepath, string extension, string component, float *data, int rows, int cols, int factors) {
+void writeToFile(string parent_dir, string base_filename, string extension, string component, float *data, int rows, int cols, int factors) {
     char filename [255];
-    sprintf(filename, "%s_%d_%s.%s", filepath.c_str(), factors, component.c_str(), extension.c_str());
+    sprintf(filename, "%s/%s_f%d_%s.%s", parent_dir.c_str(), base_filename.c_str(), factors, component.c_str(), extension.c_str());
 
     FILE *fp;
     fp = fopen(filename, "w");

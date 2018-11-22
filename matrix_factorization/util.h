@@ -22,4 +22,4 @@ void printRating(Rating r);
 void printCSV(std::vector<Rating> *ratings);
 std::vector<Rating> readCSV(std::string filename, int *rows, int *cols, float *global_bias);
 cu2rec::CudaCSRMatrix* createSparseMatrix(std::vector<Rating> *ratings, int rows, int cols);
-void writeToFile(string filepath, string extension, string component, float *data, int rows, int cols, int factors);
+void writeToFile(string parent_dir, string base_filename, string extension, string component, float *data, int rows, int cols, int factors);

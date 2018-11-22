@@ -1,7 +1,6 @@
 #include <iostream>     // std::cout
 #include <assert.h>
 #include <vector>
-#include <assert.h>
 
 #include "../util.h"
 #include "../matrix.h"
@@ -9,11 +8,17 @@
 /* To index element (i,j) of a 2D array stored as 1D */
 #define index(i, j, N)  ((i)*(N)) + (j)
 
-string filename = "../../data/test_ratings.csv";
+string test_dir = "../../data/test";
+string test_gen_dir = "../../data/test/gen";
+string test_filename = "test_ratings.csv";
 
 vector<Rating> test_read_csv() {
     int rows, cols;
     float global_bias;
+    string filename;
+    filename.append(test_dir);
+    filename.append("/");
+    filename.append(test_filename);
     vector<Rating> ratings = readCSV(filename, &rows, &cols, &global_bias);
     assert(rows == 6);
     assert(cols == 5);
@@ -52,15 +57,15 @@ void test_output() {
     global_bias[0] = 1.0;
 
     // Get filepath without extension
-    size_t lastindex = filename.find_last_of("."); 
-    string filepath = filename.substr(0, lastindex); 
+    size_t lastindex = test_filename.find_last_of("."); 
+    string filename = test_filename.substr(0, lastindex); 
 
     // Write components to file
-    writeToFile(filepath, "csv", "p", P, user_count, factors, factors);
-    writeToFile(filepath, "csv", "q", Q, item_count, factors, factors);
-    writeToFile(filepath, "csv", "user_bias", user_bias, user_count, 1, factors);
-    writeToFile(filepath, "csv", "item_bias", item_bias, item_count, 1, factors);
-    writeToFile(filepath, "csv", "global_bias", global_bias, 1, 1, factors);
+    writeToFile(test_gen_dir, filename, "csv", "p", P, user_count, factors, factors);
+    writeToFile(test_gen_dir, filename, "csv", "q", Q, item_count, factors, factors);
+    writeToFile(test_gen_dir, filename, "csv", "user_bias", user_bias, user_count, 1, factors);
+    writeToFile(test_gen_dir, filename, "csv", "item_bias", item_bias, item_count, 1, factors);
+    writeToFile(test_gen_dir, filename, "csv", "global_bias", global_bias, 1, 1, factors);
 
     // Free memory
     delete [] P;
@@ -73,6 +78,10 @@ void test_sparse_matrix() {
     // Reread CSV so this test is self contained
     int rows, cols;
     float global_bias;
+    string filename;
+    filename.append(test_dir);
+    filename.append("/");
+    filename.append(test_filename);
     vector<Rating> ratings = readCSV(filename, &rows, &cols, &global_bias);
 
     // Create Sparse Matrix in Device memory

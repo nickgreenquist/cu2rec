@@ -19,11 +19,15 @@ test_sgd: create_bin
 test_training: create_bin
 	nvcc -std=c++11 -o bin/test_training -arch=sm_52 -G ../util.cu ../matrix.cu ../loss.cu ../sgd.cu ../training.cu test_training.cu
 
-test_util: create_bin
+test_util: create_bin create_test_gen
 	nvcc -std=c++11 -o bin/test_util -arch=sm_52 -G ../util.cu ../matrix.cu test_util.cu
 
 create_bin:
 	mkdir -p bin
 
+create_test_gen:
+	mkdir -p ../../data/test/gen
+
 clean:
 	rm -rf bin/
+	rm -rf ../../data/test/gen/
