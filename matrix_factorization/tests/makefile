@@ -1,4 +1,6 @@
-all: test_matrix test_loss test_sgd test_training test_util
+all: compile_all run_all
+
+compile_all: test_matrix test_loss test_sgd test_training test_util
 
 run_all:
 	@bin/test_matrix 1>/dev/null || echo "test_matrix failed!"
