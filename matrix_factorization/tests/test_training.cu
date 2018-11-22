@@ -11,7 +11,7 @@
 
 using namespace std;
 
-string filename = "../../data/test_ratings.csv";
+string filename = "../../data/test/test_ratings.csv";
 
 void test_training_loop() {
     // Initalize the input matrix

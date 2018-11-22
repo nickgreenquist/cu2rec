@@ -8,7 +8,7 @@
 using namespace cu2rec;
 using namespace std;
 
-string filename = "../../data/test_ratings.csv";
+string filename = "../../data/test/test_ratings.csv";
 
 void test_sgd() {
     // Initalize the input matrix

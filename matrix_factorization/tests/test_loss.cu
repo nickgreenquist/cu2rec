@@ -10,7 +10,7 @@
 
 using namespace std;
 
-string filename = "../../data/test_ratings.csv";
+string filename = "../../data/test/test_ratings.csv";
 int factors = 2;
 
 void test_loss_sequential() {
