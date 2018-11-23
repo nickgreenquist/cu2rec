@@ -3,8 +3,6 @@
 
 #include <iostream>
 
-using namespace std;
-
 namespace config {
     // CUDA variables
     __constant__ int cur_iterations = 0;
@@ -29,8 +27,8 @@ namespace config {
             float user_bias_reg = 1e-1;
             float item_bias_reg = 1e-1;
 
-            bool read_config(string file_path);
-            bool write_config(string file_path);
+            bool read_config(std::string file_path);
+            bool write_config(std::string file_path);
             bool set_cuda_variables();
             bool get_cuda_variables();
     };    

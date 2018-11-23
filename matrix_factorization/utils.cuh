@@ -5,6 +5,9 @@
 #include <stdexcept>
 #include <sstream>
 
+#include <cuda_runtime.h>
+#include "cublas_v2.h"
+
 namespace cu2rec {
 using std::invalid_argument;
 

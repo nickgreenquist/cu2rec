@@ -20,7 +20,8 @@ test_loss: create_bin
 	nvcc -std=c++11 -o bin/test_loss -arch=sm_52 ../util.cu ../matrix.cu ../loss.cu test_loss.cu
 
 test_sgd: create_bin
-	nvcc -std=c++11 -o bin/test_sgd -arch=sm_52 -G ../util.cu ../matrix.cu ../sgd.cu test_sgd.cu
+	sed '/#include "[a-zA-Z./]*"/d' ../config.h ../config.cu ../utils.cuh ../matrix.h ../matrix.cu ../util.h ../util.cu ../sgd.h ../sgd.cu test_sgd.cu > test_sgd_all.cu
+	nvcc -std=c++11 -o bin/test_sgd -arch=sm_52 -G test_sgd_all.cu
 
 test_training: create_bin
 	nvcc -std=c++11 -o bin/test_training -arch=sm_52 -G ../util.cu ../matrix.cu ../loss.cu ../sgd.cu ../training.cu test_training.cu

@@ -1,9 +1,11 @@
 #include <fstream>
 
+#include "cuda.h"
+
 #include "config.h"
 
 namespace config {
-    bool Config::read_config(string file_path) {
+    bool Config::read_config(std::string file_path) {
         std::ifstream config_file(file_path);
         config_file >> cur_iterations >> total_iterations >> n_factors >> learning_rate >>
             seed >> P_reg >> Q_reg >> user_bias_reg >> item_bias_reg;
@@ -11,7 +13,7 @@ namespace config {
         return true;
     }
 
-    bool Config::write_config(string file_path) {
+    bool Config::write_config(std::string file_path) {
         std::ofstream config_file(file_path);
         config_file << cur_iterations << " " << total_iterations << " " << n_factors << " " <<
         learning_rate << " " << seed << " " << P_reg << " " << Q_reg << " " << user_bias_reg <<

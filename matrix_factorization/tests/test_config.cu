@@ -2,10 +2,10 @@
 
 #include "../config.h"
 
-string file_path = "../../data/test/test_config.cfg";
-string gen_path = "../../data/test/gen/test_config.cfg";
+std::string file_path = "../../data/test/test_config.cfg";
+std::string gen_path = "../../data/test/gen/test_config.cfg";
 
-void test_config_load(string file_path) {
+void test_config_load(std::string file_path) {
     config::Config *cfg = new config::Config();
     cfg->read_config(file_path);
     assert(cfg->total_iterations == 100);
@@ -39,18 +39,18 @@ void test_config_get_cuda_variables() {
 }
 
 int main() {
-    cout << "Testing config load...\n";
+    std::cout << "Testing config load...\n";
     test_config_load(file_path);
-    cout << "PASSED\n";
-    cout << "Testing config save...\n";
+    std::cout << "PASSED\n";
+    std::cout << "Testing config save...\n";
     test_config_save();
-    cout << "PASSED\n";
-    cout << "Testing config cuda set variables...\n";
+    std::cout << "PASSED\n";
+    std::cout << "Testing config cuda set variables...\n";
     test_config_set_cuda_variables();
-    cout << "PASSED\n";
-    cout << "Testing config cuda get variables...\n";
+    std::cout << "PASSED\n";
+    std::cout << "Testing config cuda get variables...\n";
     test_config_get_cuda_variables();
-    cout << "PASSED\n";
+    std::cout << "PASSED\n";
 
     return 0;
 }

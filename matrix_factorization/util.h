@@ -1,3 +1,6 @@
+#ifndef CU2REC_UTIL
+#define CU2REC_UTIL
+
 #include <iostream>     // std::cout
 #include <fstream>      // std::ifstream
 #include <algorithm>
@@ -36,3 +39,5 @@ float* initialize_normal_array(int size, float mean, float stddev);
 float* initialize_normal_array(int size, int seed);
 float *initialize_normal_array(int size);
 cu2rec::CudaCSRMatrix* createSparseMatrix(std::vector<Rating> *ratings, int rows, int cols);
+
+#endif
