@@ -1,7 +1,5 @@
 #include <fstream>
-
 #include "cuda.h"
-
 #include "config.h"
 
 namespace config {
