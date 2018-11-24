@@ -1,6 +1,7 @@
 #include <assert.h>
 #include <vector>
 
+#include "../config.h"
 #include "../util.h"
 #include "../matrix.h"
 #include "../loss.h"
@@ -22,26 +23,27 @@ void test_training_loop() {
 
     // Hyperparams
     int n_factors = 2;
-    int n_iterations = 10;
-    int seed = 42;
-    float learning_rate = 1e-3;
-    float P_reg = 1e-1;
-    float Q_reg = 1e-1;
-    float user_bias_reg = 1e-1;
-    float item_bias_reg = 1e-1;
+    config::Config *cfg = new config::Config();
+    cfg->total_iterations = 10;
+    cfg->seed = 42;
+    cfg->n_factors = n_factors;
+    cfg->learning_rate = 1e-3;
+    cfg->P_reg = 1e-1;
+    cfg->Q_reg = 1e-1;
+    cfg->user_bias_reg = 1e-1;
+    cfg->item_bias_reg = 1e-1;
 
     float *P, *Q, *losses, *user_bias, *item_bias;
 
-    train(matrix, n_iterations, n_factors, learning_rate, seed, &P, &Q, &losses, &user_bias, &item_bias, global_bias,
-          P_reg, Q_reg, user_bias_reg, item_bias_reg);
+    train(matrix, cfg, &P, &Q, &losses, &user_bias, &item_bias, global_bias);
 
     cout << "Losses: ";
-    for(int i = 0; i < n_iterations; ++i) {
+    for(int i = 0; i < cfg->total_iterations; ++i) {
         cout << losses[i] << " ";
     }
     cout << endl;
 
-    assert(losses[0] >= losses[n_iterations - 1]);
+    assert(losses[0] >= losses[cfg->total_iterations - 1]);
 
     // Free memory
     delete [] P;
@@ -50,6 +52,7 @@ void test_training_loop() {
     delete [] user_bias;
     delete [] item_bias;
     delete matrix;
+    delete cfg;
 }
 
 int main() {

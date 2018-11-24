@@ -1,3 +1,6 @@
+#ifndef CU2REC_UTIL
+#define CU2REC_UTIL
+
 #include <iostream>     // std::cout
 #include <fstream>      // std::ifstream
 #include <algorithm>
@@ -21,6 +24,7 @@ struct Rating
 // File read and write utils
 
 std::vector<Rating> readCSV(std::string filename, int *rows, int *cols, float *global_bias);
+void writeCSV(char *file_path, float *data, int rows, int cols);
 void writeToFile(string parent_dir, string base_filename, string extension, string component, float *data, int rows, int cols, int factors);
 
 // Print utils
@@ -35,3 +39,5 @@ float* initialize_normal_array(int size, float mean, float stddev);
 float* initialize_normal_array(int size, int seed);
 float *initialize_normal_array(int size);
 cu2rec::CudaCSRMatrix* createSparseMatrix(std::vector<Rating> *ratings, int rows, int cols);
+
+#endif

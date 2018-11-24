@@ -1,5 +1,6 @@
 #include <random>
 
+#include "config.h"
 #include "loss.h"
 #include "matrix.h"
 #include "sgd.h"
@@ -10,25 +11,25 @@
 using namespace cu2rec;
 using namespace std;
 
-void train(CudaCSRMatrix* matrix, int n_iterations, int n_factors, float learning_rate, int seed,
-           float **P_ptr, float **Q_ptr, float **losses_ptr, float **user_bias_ptr, float **item_bias_ptr, float global_bias,
-           float P_reg, float Q_reg, float user_bias_reg, float item_bias_reg) {
+void train(CudaCSRMatrix* matrix, config::Config* cfg, float **P_ptr, float **Q_ptr, float **losses_ptr,
+           float **user_bias_ptr, float **item_bias_ptr, float global_bias) {
     int user_count = matrix->rows;
     int item_count = matrix->cols;
+    cfg->set_cuda_variables();
 
     // Initialize P and Q
-    float *P = initialize_normal_array(user_count * n_factors);
-    float *Q = initialize_normal_array(item_count * n_factors);
-    float *losses = new float[n_iterations];
+    float *P = initialize_normal_array(user_count * cfg->n_factors);
+    float *Q = initialize_normal_array(item_count * cfg->n_factors);
+    float *losses = new float[cfg->total_iterations];
     *P_ptr = P;
     *Q_ptr = Q;
     *losses_ptr = losses;
 
     // Copy P and Q to device memory
-    CudaDenseMatrix* P_device = new CudaDenseMatrix(user_count, n_factors, P);
-    CudaDenseMatrix* Q_device = new CudaDenseMatrix(item_count, n_factors, Q);
-    CudaDenseMatrix* P_device_target = new CudaDenseMatrix(user_count, n_factors, P);
-    CudaDenseMatrix* Q_device_target = new CudaDenseMatrix(item_count, n_factors, Q);
+    CudaDenseMatrix* P_device = new CudaDenseMatrix(user_count, cfg->n_factors, P);
+    CudaDenseMatrix* Q_device = new CudaDenseMatrix(item_count, cfg->n_factors, Q);
+    CudaDenseMatrix* P_device_target = new CudaDenseMatrix(user_count, cfg->n_factors, P);
+    CudaDenseMatrix* Q_device_target = new CudaDenseMatrix(item_count, cfg->n_factors, Q);
 
     // Create the errors
     float *errors_device;
@@ -36,8 +37,8 @@ void train(CudaCSRMatrix* matrix, int n_iterations, int n_factors, float learnin
 
     // Create the total losses
     float *losses_device;
-    cudaMalloc(&losses_device, n_iterations * sizeof(float));
-    cudaMemset(losses_device, 0, n_iterations * sizeof(float));
+    cudaMalloc(&losses_device, cfg->total_iterations * sizeof(float));
+    cudaMemset(losses_device, 0, cfg->total_iterations * sizeof(float));
 
     // Create the bias arrays
     float *user_bias = initialize_normal_array(user_count);
@@ -72,16 +73,16 @@ void train(CudaCSRMatrix* matrix, int n_iterations, int n_factors, float learnin
 
     // Training loop
     cudaError_t lastError;
-    for (int i = 0; i < n_iterations; ++i) {
+    for (int i = 0; i < cfg->total_iterations; ++i) {
         // Calculate initial error per each rating
-        calculate_loss_gpu(P_device, Q_device, n_factors, user_count, item_count, matrix->nonzeros, matrix,
+        calculate_loss_gpu(P_device, Q_device, cfg->n_factors, user_count, item_count, matrix->nonzeros, matrix,
                            errors_device, user_bias_device, item_bias_device, global_bias);
 
         // Run single iteration of SGD
         sgd_update<<<dim_grid_sgd, dim_block>>>(matrix->indptr, matrix->indices, P_device->data, Q_device->data,
-                                                P_device_target->data, Q_device_target->data, n_factors, errors_device,
-                                                user_count, item_count, learning_rate, user_bias_device, item_bias_device,
-                                                user_bias_target, item_bias_target, P_reg, Q_reg, user_bias_reg, item_bias_reg);
+                                                P_device_target->data, Q_device_target->data, errors_device,
+                                                user_count, item_count, user_bias_device, item_bias_device,
+                                                user_bias_target, item_bias_target);
         lastError = cudaGetLastError();
         if(cudaSuccess != lastError) {
             printf("ERROR: %s\n", cudaGetErrorName(lastError));
@@ -89,14 +90,14 @@ void train(CudaCSRMatrix* matrix, int n_iterations, int n_factors, float learnin
 
         // Calculate total loss to check for improving loss
         total_loss_kernel<<<dim_grid_loss, dim_block>>>(errors_device, losses_device, matrix->nonzeros, i, 1);
-        if(P_reg > 0)
-            total_loss_kernel<<<dim_grid_P_reg_loss, dim_block>>>(P_device->data, losses_device, P_device->rows * P_device->cols, i, P_reg);
-        if(Q_reg > 0)
-            total_loss_kernel<<<dim_grid_Q_reg_loss, dim_block>>>(Q_device->data, losses_device, Q_device->rows * Q_device->cols, i, Q_reg);
-        if(user_bias_reg > 0)
-            total_loss_kernel<<<dim_grid_user_bias_reg_loss, dim_block>>>(user_bias_device, losses_device, user_count, i, user_bias_reg);
-        if(item_bias_reg > 0)
-            total_loss_kernel<<<dim_grid_item_bias_reg_loss, dim_block>>>(item_bias_device, losses_device, item_count, i, item_bias_reg);
+        if(cfg->P_reg > 0)
+            total_loss_kernel<<<dim_grid_P_reg_loss, dim_block>>>(P_device->data, losses_device, P_device->rows * P_device->cols, i, cfg->P_reg);
+        if(cfg->Q_reg > 0)
+            total_loss_kernel<<<dim_grid_Q_reg_loss, dim_block>>>(Q_device->data, losses_device, Q_device->rows * Q_device->cols, i, cfg->Q_reg);
+        if(cfg->user_bias_reg > 0)
+            total_loss_kernel<<<dim_grid_user_bias_reg_loss, dim_block>>>(user_bias_device, losses_device, user_count, i, cfg->user_bias_reg);
+        if(cfg->item_bias_reg > 0)
+            total_loss_kernel<<<dim_grid_item_bias_reg_loss, dim_block>>>(item_bias_device, losses_device, item_count, i, cfg->item_bias_reg);
 
         lastError = cudaGetLastError();
         if(cudaSuccess != lastError) {
@@ -106,13 +107,13 @@ void train(CudaCSRMatrix* matrix, int n_iterations, int n_factors, float learnin
         // The loss kernels modify P, Q, user_bias, and item_bias
         // Copy them back
         // TODO: avoid this entirely
-        if(P_reg > 0)
-            cudaMemcpy(P_device->data, P_device_target->data, user_count * n_factors * sizeof(float), cudaMemcpyDeviceToDevice);
-        if(Q_reg > 0)
-            cudaMemcpy(Q_device->data, Q_device_target->data, item_count * n_factors * sizeof(float), cudaMemcpyDeviceToDevice);
-        if(user_bias_reg > 0)
+        if(cfg->P_reg > 0)
+            cudaMemcpy(P_device->data, P_device_target->data, user_count * cfg->n_factors * sizeof(float), cudaMemcpyDeviceToDevice);
+        if(cfg->Q_reg > 0)
+            cudaMemcpy(Q_device->data, Q_device_target->data, item_count * cfg->n_factors * sizeof(float), cudaMemcpyDeviceToDevice);
+        if(cfg->user_bias_reg > 0)
             cudaMemcpy(user_bias_device, user_bias_target, user_count * sizeof(float), cudaMemcpyDeviceToDevice);
-        if(item_bias_reg > 0)
+        if(cfg->item_bias_reg > 0)
             cudaMemcpy(item_bias_device, item_bias_target, item_count * sizeof(float), cudaMemcpyDeviceToDevice);
 
         lastError = cudaGetLastError();
@@ -128,16 +129,18 @@ void train(CudaCSRMatrix* matrix, int n_iterations, int n_factors, float learnin
         swap(user_bias_device, user_bias_target);
         swap(item_bias_device, item_bias_target);
 
+        cfg->cur_iterations += 1;
+
         // Output current loss for this iteration
         // WARNING - SLOW: Remove after debugging due to cudaMemcpy just for printing loss
         if((i + 1) % 10 == 0) {
-            cudaMemcpy(losses, losses_device, n_iterations * sizeof(float), cudaMemcpyDeviceToHost);
+            cudaMemcpy(losses, losses_device, cfg->total_iterations * sizeof(float), cudaMemcpyDeviceToHost);
             cout << "Loss for Iteration " << i + 1 << ": " << losses[i] << "\n";
         }
     }
     
     // Copy array of losses back to host
-    cudaMemcpy(losses, losses_device, n_iterations * sizeof(float), cudaMemcpyDeviceToHost);
+    cudaMemcpy(losses, losses_device, cfg->total_iterations * sizeof(float), cudaMemcpyDeviceToHost);
 
     // Copy updated P and Q back
     P_device->to_host(P);
@@ -151,11 +154,11 @@ void train(CudaCSRMatrix* matrix, int n_iterations, int n_factors, float learnin
     // Output final loss and final components to verify results
     float *predictions = new float[user_count * item_count];
     for(int u = 0; u < user_count; u++) {
-        const float * p = &P[u * n_factors];
+        const float * p = &P[u * cfg->n_factors];
         for(int i = 0; i < item_count; i++) {
-            const float * Qi = &Q[i * n_factors];
+            const float * Qi = &Q[i * cfg->n_factors];
             float pred = global_bias + user_bias[u] + item_bias[i];
-            for (int f = 0; f < n_factors; f++)
+            for (int f = 0; f < cfg->n_factors; f++)
                 pred += Qi[f]*p[f];
             predictions[index(u, i, item_count)] = pred;
         }

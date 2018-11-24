@@ -1,6 +1,7 @@
 #include <assert.h>
 #include <vector>
 
+#include "../config.h"
 #include "../matrix.h"
 #include "../util.h"
 #include "../sgd.h"
@@ -19,11 +20,14 @@ void test_sgd() {
 
     // Hyperparams
     int n_factors = 1;
-    float learning_rate = 1e-3;
-    float P_reg = 1e-1;
-    float Q_reg = 1e-1;
-    float user_bias_reg = 1e-1;
-    float item_bias_reg = 1e-1;
+    config::Config *cfg = new config::Config();
+    cfg->n_factors = n_factors;
+    cfg->learning_rate = 1e-3;
+    cfg->P_reg = 1e-1;
+    cfg->Q_reg = 1e-1;
+    cfg->user_bias_reg = 1e-1;
+    cfg->item_bias_reg = 1e-1;
+    assert(cfg->set_cuda_variables());
 
     // Initialize P and Q
     float *P = new float[rows * n_factors];
@@ -87,9 +91,9 @@ void test_sgd() {
     int n_threads = 32;
     dim3 dimBlock(n_threads);
     dim3 dimGrid(rows / n_threads + 1);
-    sgd_update<<<dimGrid, dimBlock>>>(matrix->indptr, matrix->indices, P_device, Q_device, P_device_target, Q_device_target, n_factors,
-                                      errors_device, rows, cols, learning_rate, user_bias_device, item_bias_device, user_bias_target,
-                                      item_bias_target, P_reg, Q_reg, user_bias_reg, item_bias_reg);
+    sgd_update<<<dimGrid, dimBlock>>>(matrix->indptr, matrix->indices, P_device, Q_device, P_device_target, Q_device_target,
+                                      errors_device, rows, cols, user_bias_device, item_bias_device, user_bias_target,
+                                      item_bias_target);
     std::swap(P_device, P_device_target);
     std::swap(Q_device, Q_device_target);
     std::swap(user_bias_device, user_bias_target);
@@ -138,6 +142,7 @@ void test_sgd() {
     cudaFree(user_bias_target);
     cudaFree(item_bias_device);
     cudaFree(item_bias_target);
+    delete cfg;
     delete matrix;
     delete P;
     delete P_updated;
