@@ -1,3 +1,4 @@
+#include "config.h"
 #include "matrix.h"
 #include "util.h"
 #include "training.h"
@@ -17,18 +18,19 @@ int main(int argc, char **argv){
 
     // Hyperparams
     int n_factors = 2;
-    int n_iterations = 1000;
-    int seed = 42;
-    float learning_rate = 1e-3;
-    float P_reg = 1e-1;
-    float Q_reg = 1e-1;
-    float user_bias_reg = 1e-1;
-    float item_bias_reg = 1e-1;
+    config::Config *cfg = new config::Config();
+    cfg->total_iterations = 1000;
+    cfg->seed = 42;
+    cfg->n_factors = n_factors;
+    cfg->learning_rate = 1e-3;
+    cfg->P_reg = 1e-1;
+    cfg->Q_reg = 1e-1;
+    cfg->user_bias_reg = 1e-1;
+    cfg->item_bias_reg = 1e-1;
 
     // Create components and train on ratings
     float *P, *Q, *losses, *user_bias, *item_bias;
-    train(matrix, n_iterations, n_factors, learning_rate, seed, &P, &Q, &losses, &user_bias, &item_bias, global_bias,
-          P_reg, Q_reg, user_bias_reg, item_bias_reg);
+    train(matrix, cfg, &P, &Q, &losses, &user_bias, &item_bias, global_bias);
 
     // Write output to files
     // TODO: make this work on Windows, because it will probably fail
@@ -50,13 +52,14 @@ int main(int argc, char **argv){
     global_bias_array[0] = global_bias;
 
     // Write components to file
-    writeToFile(parent_dir, basename, "csv", "p", P, rows, n_factors, n_factors);
-    writeToFile(parent_dir, basename, "csv", "q", Q, cols, n_factors, n_factors);
-    writeToFile(parent_dir, basename, "csv", "user_bias", user_bias, rows, 1, n_factors);
-    writeToFile(parent_dir, basename, "csv", "item_bias", item_bias, cols, 1, n_factors);
-    writeToFile(parent_dir, basename, "csv", "global_bias", global_bias_array, 1, 1, n_factors);
+    writeToFile(parent_dir, basename, "csv", "p", P, rows, cfg->n_factors, cfg->n_factors);
+    writeToFile(parent_dir, basename, "csv", "q", Q, cols, cfg->n_factors, cfg->n_factors);
+    writeToFile(parent_dir, basename, "csv", "user_bias", user_bias, rows, 1, cfg->n_factors);
+    writeToFile(parent_dir, basename, "csv", "item_bias", item_bias, cols, 1, cfg->n_factors);
+    writeToFile(parent_dir, basename, "csv", "global_bias", global_bias_array, 1, 1, cfg->n_factors);
 
     // Free memory
+    delete cfg;
     delete matrix;
     delete [] P;
     delete [] Q;
