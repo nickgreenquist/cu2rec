@@ -11,6 +11,7 @@
 string test_dir = "../../data/test";
 string test_gen_dir = "../../data/test/gen";
 string test_filename = "test_ratings.csv";
+string test_array_filename = "test_Q.csv";
 
 vector<Rating> test_read_csv() {
     int rows, cols;
@@ -26,6 +27,18 @@ vector<Rating> test_read_csv() {
     assert(fabs(global_bias - 3.5555555555555) < 1e-3);
 
     return ratings;
+}
+
+void test_read_array() {
+    string filename;
+    filename.append(test_dir);
+    filename.append("/");
+    filename.append(test_array_filename);
+    float *arr = read_array(filename.c_str());
+    for(int i = 0; i < 10; ++i) {
+        assert(fabs(arr[i] - i) < 1e-3);
+    }
+    delete [] arr;
 }
 
 void test_output() {
@@ -125,11 +138,15 @@ int main() {
     test_read_csv();
     cout << "PASSED\n";
 
+    cout << "Testing reading components from files...";
+    test_read_array();
+    cout << "PASSED\n";
+
     cout << "Testing Sparse Matrix is Created correctly...";
     test_sparse_matrix();
     cout << "PASSED\n";
 
-    cout << "Testing writing components to files...\n";
+    cout << "Testing writing components to files...";
     test_output();
     cout << "PASSED\n";
 

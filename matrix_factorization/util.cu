@@ -1,3 +1,4 @@
+#include <sstream>
 #include <vector>
 
 #include "util.h"
@@ -36,6 +37,26 @@ std::vector<Rating> readCSV(std::string filename, int *rows, int *cols, float *g
         std::cerr<<"ERROR: The file isnt open.\n";
         return ratings;
     }
+}
+
+float* read_array(const char *file_path) {
+    std::ifstream array_file(file_path);
+    vector<float> nums;
+    if(array_file.is_open()) {
+        std::string line;
+        while(getline(array_file, line)) {
+            std::stringstream line_stream(line);
+            while(getline(line_stream, line, ',')) {
+                float num = std::stof(line);
+                nums.push_back(num);
+            }
+          }
+    } else {
+        return nullptr;
+    }
+    float *num_arr = new float[nums.size()];
+    std::copy(nums.begin(), nums.end(), num_arr);
+    return num_arr;
 }
 
 void writeCSV(char *file_path, float *data, int rows, int cols) {
