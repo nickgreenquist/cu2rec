@@ -11,18 +11,16 @@
 using namespace cu2rec;
 using namespace std;
 
-void train(CudaCSRMatrix* matrix, config::Config* cfg, float **P_ptr, float **Q_ptr, float **losses_ptr,
-           float **user_bias_ptr, float **item_bias_ptr, float global_bias) {
+void train(CudaCSRMatrix* matrix, config::Config* cfg, float **P_ptr, float **Q_ptr, float *Q, float **losses_ptr,
+           float **user_bias_ptr, float **item_bias_ptr, float *item_bias, float global_bias) {
     int user_count = matrix->rows;
     int item_count = matrix->cols;
     cfg->set_cuda_variables();
 
-    // Initialize P and Q
+    // Initialize P, Q has already been initialized
     float *P = initialize_normal_array(user_count * cfg->n_factors);
-    float *Q = initialize_normal_array(item_count * cfg->n_factors);
     float *losses = new float[cfg->total_iterations];
     *P_ptr = P;
-    *Q_ptr = Q;
     *losses_ptr = losses;
 
     // Copy P and Q to device memory
@@ -40,11 +38,9 @@ void train(CudaCSRMatrix* matrix, config::Config* cfg, float **P_ptr, float **Q_
     cudaMalloc(&losses_device, cfg->total_iterations * sizeof(float));
     cudaMemset(losses_device, 0, cfg->total_iterations * sizeof(float));
 
-    // Create the bias arrays
+    // Create the bias array
     float *user_bias = initialize_normal_array(user_count);
-    float *item_bias = initialize_normal_array(item_count);
     *user_bias_ptr = user_bias;
-    *item_bias_ptr = item_bias;
     
     float *user_bias_device;
     cudaMalloc(&user_bias_device, user_count * sizeof(float));
@@ -186,4 +182,15 @@ void train(CudaCSRMatrix* matrix, config::Config* cfg, float **P_ptr, float **Q_
 
     // TODO: remove after debugging issues with outputting components
     delete [] predictions;
+}
+
+void train(CudaCSRMatrix* matrix, config::Config* cfg, float **P_ptr, float **Q_ptr, float **losses_ptr,
+           float **user_bias_ptr, float **item_bias_ptr, float global_bias) {
+    int item_count = matrix->cols;
+    // Initialize for regular training
+    float *Q = initialize_normal_array(item_count * cfg->n_factors);
+    float *item_bias = initialize_normal_array(item_count);
+    *Q_ptr = Q;
+    *item_bias_ptr = item_bias;
+    train(matrix, cfg, P_ptr, Q_ptr, Q, losses_ptr, user_bias_ptr, item_bias_ptr, item_bias, global_bias);
 }

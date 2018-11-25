@@ -23,6 +23,7 @@ struct Rating
 
 // File read and write utils
 
+float* read_array(const char *file_path, int *n_rows_ptr, int *n_cols_ptr);
 float* read_array(const char *file_path);
 std::vector<Rating> readCSV(std::string filename, int *rows, int *cols, float *global_bias);
 void writeCSV(char *file_path, float *data, int rows, int cols);

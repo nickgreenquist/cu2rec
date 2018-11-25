@@ -14,6 +14,7 @@ namespace config {
     __constant__ float Q_reg = 1e-1;
     __constant__ float user_bias_reg = 1e-1;
     __constant__ float item_bias_reg = 1e-1;
+    __constant__ bool is_train = true;
 
     class Config {
         public:
@@ -26,6 +27,7 @@ namespace config {
             float Q_reg = 1e-1;
             float user_bias_reg = 1e-1;
             float item_bias_reg = 1e-1;
+            bool is_train = true;
 
             bool read_config(std::string file_path);
             bool write_config(std::string file_path);

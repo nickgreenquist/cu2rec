@@ -39,9 +39,11 @@ std::vector<Rating> readCSV(std::string filename, int *rows, int *cols, float *g
     }
 }
 
-float* read_array(const char *file_path) {
+float* read_array(const char *file_path, int *n_rows_ptr, int *n_cols_ptr) {
     std::ifstream array_file(file_path);
     vector<float> nums;
+    int n_rows = 0;
+    int n_cols = 0;
     if(array_file.is_open()) {
         std::string line;
         while(getline(array_file, line)) {
@@ -49,14 +51,23 @@ float* read_array(const char *file_path) {
             while(getline(line_stream, line, ',')) {
                 float num = std::stof(line);
                 nums.push_back(num);
+                n_cols += 1;
             }
-          }
+            n_rows += 1;
+        }
     } else {
         return nullptr;
     }
     float *num_arr = new float[nums.size()];
     std::copy(nums.begin(), nums.end(), num_arr);
+    *n_rows_ptr = n_rows;
+    *n_cols_ptr = n_cols;
     return num_arr;
+}
+
+float* read_array(const char *file_path) {
+    int n_rows, n_cols;
+    return read_array(file_path, &n_rows, &n_cols);
 }
 
 void writeCSV(char *file_path, float *data, int rows, int cols) {
