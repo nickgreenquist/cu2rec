@@ -5,30 +5,28 @@
 #include "matrix.h"
 #include "util.h"
 
-// TODO: have this here instead of inside the training loop
-/*
-float* predict_ratings(cu2rec::CudaCSRMatrix *matrix, float *Q, int item_count) {
-    float *predictions = new float[item_count];
-    for(int u = 0; u < user_count; u++) {
-        const float * p = &P[u * cfg->n_factors];
-        for(int i = 0; i < item_count; i++) {
-            const float * Qi = &Q[i * cfg->n_factors];
-            float pred = global_bias + user_bias[u] + item_bias[i];
-            for (int f = 0; f < cfg->n_factors; f++)
-                pred += Qi[f]*p[f];
-            predictions[index(u, i, item_count)] = pred;
+float* predict_ratings(float *P_u, float *Q, float user_bias, float *item_bias, float global_bias,
+                       int n_items, int n_factors) {
+    float *predictions = new float[n_items];
+    for(int i = 0; i < n_items; i++) {
+        const float * Q_i = &Q[i * n_factors];
+        float pred = global_bias + user_bias + item_bias[i];
+        for(int f = 0; f < n_factors; f++) {
+            pred += Q_i[f]*P_u[f];
         }
+        predictions[i] = pred;
     }
-    cout << "Predictions: " <<  "\n";
-    for(int u = 0; u < user_count; u++) {
-        cout << "[";
-        for(int i = 0; i < item_count; i++) {
-            cout << predictions[index(u, i, item_count)] << ", ";
-        }
-        cout << "]\n";
-    }
+    return predictions;
 }
-*/
+
+void print_predictions(float *predictions, int n_items) {
+    cout << "Predictions: " <<  "\n";
+    cout << "[";
+    for(int i = 0; i < n_items; i++) {
+        cout << predictions[i] << ", ";
+    }
+    cout << "]\n";
+}
 
 int main(int argc, char **argv) {
     if(argc < 2) {
@@ -87,6 +85,9 @@ int main(int argc, char **argv) {
     float *P, *losses, *user_bias;
     train(matrix, cfg, &P, &Q, Q, &losses, &user_bias, &item_bias, item_bias, global_bias);
 
+    float *predictions = predict_ratings(P, Q, user_bias[0], item_bias, global_bias, n_items, cfg->n_factors);
+    print_predictions(predictions, n_items);
+
     delete cfg;
     delete matrix;
     delete [] losses;
@@ -95,6 +96,7 @@ int main(int argc, char **argv) {
     delete [] user_bias;
     delete [] item_bias;
     delete [] global_bias_arr;
+    delete [] predictions;
 
     return 0;
 }
