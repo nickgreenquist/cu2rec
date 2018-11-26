@@ -28,6 +28,35 @@ void print_predictions(float *predictions, int n_items) {
     cout << "]\n";
 }
 
+typedef std::pair<float,int> rated_item;
+
+bool comparator(const rated_item& l, const rated_item& r) {
+    return l.first > r.first;
+}
+
+vector<rated_item> get_recommendations(vector<Rating> *user_ratings, float *predictions, int n_items) {
+    vector<rated_item> items;
+    std::vector<Rating>::iterator rating = user_ratings->begin();
+    for(int item = 0; item < n_items; ++item) {
+        if((*rating).itemID != item) {
+            items.push_back(rated_item(predictions[item], item));
+        } else {
+            if(rating != user_ratings->end()) {
+                rating++;
+            }
+        }
+    }
+    std::sort(items.begin(), items.end(), comparator);
+    return items;
+}
+
+void print_recommendations(vector<rated_item> *items) {
+    cout << "Recommendations:" << endl;
+    for(int i = 0; i < items->size(); ++i) {
+        printf("Rank: %d\tItem: %d\tEstimated rating: %f\n", i + 1, items->at(i).second, items->at(i).first);
+    }
+}
+
 int main(int argc, char **argv) {
     if(argc < 2) {
         return 2;
@@ -87,6 +116,8 @@ int main(int argc, char **argv) {
 
     float *predictions = predict_ratings(P, Q, user_bias[0], item_bias, global_bias, n_items, cfg->n_factors);
     print_predictions(predictions, n_items);
+    vector<rated_item> items = get_recommendations(&ratings, predictions, n_items);
+    print_recommendations(&items);
 
     delete cfg;
     delete matrix;
