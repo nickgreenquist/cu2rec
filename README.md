@@ -12,7 +12,7 @@
 
 ## Training
 1. `make mf`
-2. `bin/mf <ratings_file>`
+2. `bin/mf -c <config_file> <ratings_file>`
 
 ## Getting recommendations for a user
 1. Make sure you get the user data into the same ratings format as MovieLens.

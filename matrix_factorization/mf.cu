@@ -1,3 +1,5 @@
+#include <getopt.h>
+
 #include "config.h"
 #include "matrix.h"
 #include "util.h"
@@ -8,25 +10,30 @@ int main(int argc, char **argv){
     if(argc < 2) {
         return -1;
     }
+    std::string filename_config;
+    int o;
+    while((o = getopt(argc, argv, "c:")) != -1) {
+        switch(o) {
+            case 'c':
+                filename_config = optarg;
+                break;
+            default:
+                cout << "Unknown option.\n";
+                return 1;
+        }
+    }
 
     // Load in data
-    string file_path = argv[1];
+    string file_path = argv[optind++];
     int rows, cols;
     float global_bias;
     std::vector<Rating> ratings = readCSV(file_path, &rows, &cols, &global_bias);
     cu2rec::CudaCSRMatrix* matrix = createSparseMatrix(&ratings, rows, cols);
 
     // Hyperparams
-    int n_factors = 2;
     config::Config *cfg = new config::Config();
-    cfg->total_iterations = 1000;
-    cfg->seed = 42;
-    cfg->n_factors = n_factors;
-    cfg->learning_rate = 1e-3;
-    cfg->P_reg = 1e-1;
-    cfg->Q_reg = 1e-1;
-    cfg->user_bias_reg = 1e-1;
-    cfg->item_bias_reg = 1e-1;
+    if(!filename_config.empty())
+        cfg->read_config(filename_config);
 
     // Create components and train on ratings
     float *P, *Q, *losses, *user_bias, *item_bias;

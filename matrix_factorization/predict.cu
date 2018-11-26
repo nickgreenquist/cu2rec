@@ -91,10 +91,7 @@ int main(int argc, char **argv) {
     }
     config::Config *cfg = new config::Config();
     cfg->read_config(filename_config);
-    cfg->total_iterations = 10;
-    cfg->learning_rate = 1e-1;
     cfg->is_train = false;
-    cfg->n_factors = 2;
     cfg->set_cuda_variables();
     int n_items, n_factors;
     float *item_bias = read_array(filename_item_bias.c_str(), &n_factors, &n_items);
