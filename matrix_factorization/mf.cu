@@ -34,6 +34,7 @@ int main(int argc, char **argv){
     config::Config *cfg = new config::Config();
     if(!filename_config.empty())
         cfg->read_config(filename_config);
+    cfg->print_config();
 
     // Create components and train on ratings
     float *P, *Q, *losses, *user_bias, *item_bias;

@@ -59,4 +59,16 @@ namespace config {
         }
         return true;
     }
+
+    void Config::print_config() {
+        printf("Hyperparameters:\n");
+        printf("total_iterations: %d\n", total_iterations);
+        printf("n_factors: %d\n", n_factors);
+        printf("learning_rate: %f\n", learning_rate);
+        printf("P_reg: %f\n", P_reg);
+        printf("Q_reg: %f\n", Q_reg);
+        printf("user_bias_reg: %f\n", user_bias_reg);
+        printf("item_bias_reg: %f\n", item_bias_reg);
+        printf("is_train: %s\n", is_train?"true":"false");
+    }
 }

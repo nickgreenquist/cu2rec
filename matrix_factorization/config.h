@@ -33,6 +33,7 @@ namespace config {
             bool write_config(std::string file_path);
             bool set_cuda_variables();
             bool get_cuda_variables();
+            void print_config();
     };    
 }
 
