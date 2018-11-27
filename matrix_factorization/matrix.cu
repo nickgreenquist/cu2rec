@@ -1,30 +1,22 @@
 // Credit: https://github.com/benfred/implicit
+#include <stdexcept>
+#include <sstream>
 
 #include <cuda_runtime.h>
 #include "cublas_v2.h"
 
 #include "matrix.h"
-#include "utils.cuh"
+
+#define CHECK_CUDA(code) { checkCuda((code), __FILE__, __LINE__); }
+inline void checkCuda(cudaError_t code, const char *file, int line) {
+    if (code != cudaSuccess) {
+        std::stringstream err;
+        err << "Cuda Error: " << cudaGetErrorString(code) << " (" << file << ":" << line << ")";
+        throw std::runtime_error(err.str());
+    }
+}
 
 namespace cu2rec {
-    template <typename T>
-    CudaVector<T>::CudaVector(int size, const T * host_data)
-        : size(size) {
-        CHECK_CUDA(cudaMalloc(&data, size * sizeof(T)));
-        if (host_data) {
-            CHECK_CUDA(cudaMemcpy(data, host_data, size * sizeof(T), cudaMemcpyHostToDevice));
-        }
-    }
-
-
-    template <typename T>
-    CudaVector<T>::~CudaVector() {
-        CHECK_CUDA(cudaFree(data));
-    }
-
-    template struct CudaVector<int>;
-    template struct CudaVector<float>;
-
     CudaDenseMatrix::CudaDenseMatrix(int rows, int cols, const float * host_data)
         : rows(rows), cols(cols) {
         CHECK_CUDA(cudaMalloc(&data, rows * cols * sizeof(float)));
@@ -58,26 +50,6 @@ namespace cu2rec {
     CudaCSRMatrix::~CudaCSRMatrix() {
         CHECK_CUDA(cudaFree(indices));
         CHECK_CUDA(cudaFree(indptr));
-        CHECK_CUDA(cudaFree(data));
-    }
-
-    CudaCOOMatrix::CudaCOOMatrix(int rows, int cols, int nonzeros,
-                                const int * row_, const int * col_, const float * data_)
-        : rows(rows), cols(cols), nonzeros(nonzeros) {
-
-        CHECK_CUDA(cudaMalloc(&row, nonzeros * sizeof(int)));
-        CHECK_CUDA(cudaMemcpy(row, row_, nonzeros * sizeof(int), cudaMemcpyHostToDevice));
-
-        CHECK_CUDA(cudaMalloc(&col, nonzeros * sizeof(int)));
-        CHECK_CUDA(cudaMemcpy(col, col_, nonzeros * sizeof(int), cudaMemcpyHostToDevice));
-
-        CHECK_CUDA(cudaMalloc(&data, nonzeros * sizeof(float)));
-        CHECK_CUDA(cudaMemcpy(data, data_, nonzeros * sizeof(int), cudaMemcpyHostToDevice));
-    }
-
-    CudaCOOMatrix::~CudaCOOMatrix() {
-        CHECK_CUDA(cudaFree(row));
-        CHECK_CUDA(cudaFree(col));
         CHECK_CUDA(cudaFree(data));
     }
 }  // namespace cu2rec

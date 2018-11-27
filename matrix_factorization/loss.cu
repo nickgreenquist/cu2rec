@@ -7,7 +7,6 @@
 #include "cublas_v2.h"
 
 #include "matrix.h"
-#include "utils.cuh"
 
 #define index(i, j, N)  ((i)*(N)) + (j)
 

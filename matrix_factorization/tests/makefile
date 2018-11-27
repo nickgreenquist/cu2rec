@@ -1,10 +1,9 @@
 all: compile_all run_all
 
-compile_all: test_config test_matrix test_loss test_sgd test_training test_util
+compile_all: test_config test_loss test_sgd test_training test_util
 
 run_all:
 	@bin/test_config 1>/dev/null || echo "test_config failed!"
-	@bin/test_matrix 1>/dev/null || echo "test_matrix failed!"
 	@bin/test_loss 1>/dev/null || echo "test_loss failed!"
 	@bin/test_sgd 1>/dev/null || echo "test_sgd failed!"
 	@bin/test_training 1>/dev/null || echo "test_training failed!"
@@ -13,18 +12,15 @@ run_all:
 test_config: create_bin create_test_gen
 	nvcc -std=c++11 -o bin/test_config -arch=sm_52 ../config.cu test_config.cu
 
-test_matrix: create_bin
-	nvcc -std=c++11 -o bin/test_matrix -arch=sm_52 ../util.cu ../matrix.cu test_matrix.cu
-
 test_loss: create_bin
 	nvcc -std=c++11 -o bin/test_loss -arch=sm_52 ../util.cu ../matrix.cu ../loss.cu test_loss.cu
 
 test_sgd: create_bin
-	sed '/#include "[a-zA-Z./]*"/d' ../config.h ../config.cu ../utils.cuh ../matrix.h ../matrix.cu ../util.h ../util.cu ../sgd.h ../sgd.cu test_sgd.cu > bin/test_sgd_all.cu
+	sed '/#include "[a-zA-Z./]*"/d' ../config.h ../config.cu ../matrix.h ../matrix.cu ../util.h ../util.cu ../sgd.h ../sgd.cu test_sgd.cu > bin/test_sgd_all.cu
 	nvcc -std=c++11 -o bin/test_sgd -arch=sm_52 -G bin/test_sgd_all.cu
 
 test_training: create_bin
-	sed '/#include "[a-zA-Z./]*"/d' ../config.h ../config.cu ../utils.cuh ../matrix.h ../matrix.cu ../loss.h ../loss.cu ../util.h ../util.cu ../sgd.h ../sgd.cu ../training.h ../training.cu test_training.cu > bin/test_training_all.cu
+	sed '/#include "[a-zA-Z./]*"/d' ../config.h ../config.cu ../matrix.h ../matrix.cu ../loss.h ../loss.cu ../util.h ../util.cu ../sgd.h ../sgd.cu ../training.h ../training.cu test_training.cu > bin/test_training_all.cu
 	nvcc -std=c++11 -o bin/test_training -arch=sm_52 -G bin/test_training_all.cu
 
 test_util: create_bin create_test_gen
