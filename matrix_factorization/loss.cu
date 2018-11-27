@@ -27,16 +27,13 @@ __global__ void loss_kernel(int factors, int user_count, int item_count, const f
             int item_id = indices[i];
             const float * Qi = &Q[item_id * factors];
 
-            // update loss with this rating and prediction
-            float rating = data[i];
-
             // calculate predicted rating
             float pred = global_bias + user_bias[u] + item_bias[item_id];
             for (int f = 0; f < factors; f++)
                 pred += Qi[f]*p[f];
 
-            // set the error value for this rating
-            error[i] = rating - pred;
+            // set the error value for this rating: rating - pred
+            error[i] = data[i] - pred;
         }
     }
 }
