@@ -84,9 +84,21 @@ void train(CudaCSRMatrix* matrix, config::Config* cfg, float **P_ptr, float **Q_
         calculate_loss_gpu(P_device, Q_device, cfg->n_factors, user_count, item_count, matrix->nonzeros, matrix,
                            errors_device, user_bias_device, item_bias_device, global_bias);
 
+        if(i == 0) {
+            cudaMemcpy(errors_host, errors_device, matrix->nonzeros * sizeof(float), cudaMemcpyDeviceToHost);
+            float total = 0.0;
+            for(int k = 0; k <  matrix->nonzeros; k++) {
+                total += abs(errors_host[k]);
+            }
+            cout << "Loss for Iteration " << i + 1 << ": " << total << "\n";
+        }
+        for(int k = 0; k < matrix->nonzeros; k++) {
+            cout << errors_host[k] << "\n";
+        }
+
         // Set up random state
-        // initCurand<<<dim_grid_sgd, dim_block>>>(d_state, seed);
-        // seed++;
+        initCurand<<<dim_grid_sgd, dim_block>>>(d_state, seed);
+        seed++;
 
         // Run single iteration of SGD
         sgd_update<<<dim_grid_sgd, dim_block>>>(matrix->indptr, matrix->indices, P_device->data, Q_device->data,
@@ -100,7 +112,7 @@ void train(CudaCSRMatrix* matrix, config::Config* cfg, float **P_ptr, float **Q_
 
         // Calculate total loss to check for improving loss
         // WARNING - SLOW: Remove after debugging due to cudaMemcpy just for printing loss
-        if((i + 1) % 10 == 0) {
+        if((i + 1) % 5 == 0) {
             // total_loss_kernel<<<dim_grid_loss, dim_block>>>(errors_device, losses_device, matrix->nonzeros, i, 1);
             // if(cfg->P_reg > 0)
             //     total_loss_kernel<<<dim_grid_P_reg_loss, dim_block>>>(P_device->data, losses_device, P_device->rows * P_device->cols, i, cfg->P_reg);
@@ -126,6 +138,13 @@ void train(CudaCSRMatrix* matrix, config::Config* cfg, float **P_ptr, float **Q_
                 total += abs(errors_host[k]);
             }
             cout << "Loss for Iteration " << i + 1 << ": " << total << "\n";
+
+            // Decrease learning rate
+            if((i+1) % 10 == 0) {
+                cfg->learning_rate *= .75;
+                cfg->set_cuda_variables();
+                cout << "LearningRage: " << cfg->learning_rate << "\n";
+            }
         }
 
         // The loss kernels modify P, Q, user_bias, and item_bias
