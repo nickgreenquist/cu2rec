@@ -21,11 +21,11 @@ namespace config {
             int cur_iterations = 0;
             int total_iterations = 1000;
             int n_factors = 10;
-            float learning_rate = 1e-4;
+            float learning_rate = 1e-5;
             int seed = 42;
-            float P_reg = 1e-1;
+            float P_reg = 1e-2;
             float Q_reg = 1e-1;
-            float user_bias_reg = 1e-1;
+            float user_bias_reg = 1e-2;
             float item_bias_reg = 1e-1;
             bool is_train = true;
 

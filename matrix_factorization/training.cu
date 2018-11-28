@@ -1,4 +1,6 @@
 #include <random>
+#include <time.h>
+#include <cmath>
 
 #include "config.h"
 #include "loss.h"
@@ -32,6 +34,9 @@ void train(CudaCSRMatrix* matrix, config::Config* cfg, float **P_ptr, float **Q_
     // Create the errors
     float *errors_device;
     cudaMalloc(&errors_device, matrix->nonzeros * sizeof(float));
+
+    // TODO: delete this
+    float *errors_host = new float[matrix->nonzeros];
 
     // Create the total losses
     float *losses_device;
@@ -67,6 +72,11 @@ void train(CudaCSRMatrix* matrix, config::Config* cfg, float **P_ptr, float **Q_
     dim3 dim_grid_user_bias_reg_loss(user_count / n_threads + 1);
     dim3 dim_grid_item_bias_reg_loss(item_count / n_threads + 1);
 
+    // Create curand state
+    curandState *d_state;
+    cudaMalloc(&d_state, sizeof(curandState));
+    int seed = 1;
+
     // Training loop
     cudaError_t lastError;
     for (int i = 0; i < cfg->total_iterations; ++i) {
@@ -74,48 +84,66 @@ void train(CudaCSRMatrix* matrix, config::Config* cfg, float **P_ptr, float **Q_
         calculate_loss_gpu(P_device, Q_device, cfg->n_factors, user_count, item_count, matrix->nonzeros, matrix,
                            errors_device, user_bias_device, item_bias_device, global_bias);
 
+        // Set up random state
+        // initCurand<<<dim_grid_sgd, dim_block>>>(d_state, seed);
+        // seed++;
+
         // Run single iteration of SGD
         sgd_update<<<dim_grid_sgd, dim_block>>>(matrix->indptr, matrix->indices, P_device->data, Q_device->data,
                                                 P_device_target->data, Q_device_target->data, errors_device,
                                                 user_count, item_count, user_bias_device, item_bias_device,
-                                                user_bias_target, item_bias_target);
+                                                user_bias_target, item_bias_target, global_bias, matrix->data, d_state);
         lastError = cudaGetLastError();
         if(cudaSuccess != lastError) {
             printf("ERROR: %s\n", cudaGetErrorName(lastError));
         }
 
         // Calculate total loss to check for improving loss
-        total_loss_kernel<<<dim_grid_loss, dim_block>>>(errors_device, losses_device, matrix->nonzeros, i, 1);
-        if(cfg->P_reg > 0)
-            total_loss_kernel<<<dim_grid_P_reg_loss, dim_block>>>(P_device->data, losses_device, P_device->rows * P_device->cols, i, cfg->P_reg);
-        if(cfg->Q_reg > 0)
-            total_loss_kernel<<<dim_grid_Q_reg_loss, dim_block>>>(Q_device->data, losses_device, Q_device->rows * Q_device->cols, i, cfg->Q_reg);
-        if(cfg->user_bias_reg > 0)
-            total_loss_kernel<<<dim_grid_user_bias_reg_loss, dim_block>>>(user_bias_device, losses_device, user_count, i, cfg->user_bias_reg);
-        if(cfg->item_bias_reg > 0)
-            total_loss_kernel<<<dim_grid_item_bias_reg_loss, dim_block>>>(item_bias_device, losses_device, item_count, i, cfg->item_bias_reg);
+        // WARNING - SLOW: Remove after debugging due to cudaMemcpy just for printing loss
+        if((i + 1) % 10 == 0) {
+            // total_loss_kernel<<<dim_grid_loss, dim_block>>>(errors_device, losses_device, matrix->nonzeros, i, 1);
+            // if(cfg->P_reg > 0)
+            //     total_loss_kernel<<<dim_grid_P_reg_loss, dim_block>>>(P_device->data, losses_device, P_device->rows * P_device->cols, i, cfg->P_reg);
+            // if(cfg->Q_reg > 0)
+            //     total_loss_kernel<<<dim_grid_Q_reg_loss, dim_block>>>(Q_device->data, losses_device, Q_device->rows * Q_device->cols, i, cfg->Q_reg);
+            // if(cfg->user_bias_reg > 0)
+            //     total_loss_kernel<<<dim_grid_user_bias_reg_loss, dim_block>>>(user_bias_device, losses_device, user_count, i, cfg->user_bias_reg);
+            // if(cfg->item_bias_reg > 0)
+            //     total_loss_kernel<<<dim_grid_item_bias_reg_loss, dim_block>>>(item_bias_device, losses_device, item_count, i, cfg->item_bias_reg);
 
-        lastError = cudaGetLastError();
-        if(cudaSuccess != lastError) {
-            printf("ERROR: %s\n", cudaGetErrorName(lastError));
+            // lastError = cudaGetLastError();
+            // if(cudaSuccess != lastError) {
+            //     printf("ERROR: %s\n", cudaGetErrorName(lastError));
+            // }
+
+            // // Output current loss for this iteration
+            // cudaMemcpy(losses, losses_device, cfg->total_iterations * sizeof(float), cudaMemcpyDeviceToHost);
+            // cout << "Loss for Iteration " << i + 1 << ": " << losses[i] << "\n";
+
+            cudaMemcpy(errors_host, errors_device, matrix->nonzeros * sizeof(float), cudaMemcpyDeviceToHost);
+            float total = 0.0;
+            for(int k = 0; k <  matrix->nonzeros; k++) {
+                total += abs(errors_host[k]);
+            }
+            cout << "Loss for Iteration " << i + 1 << ": " << total << "\n";
         }
 
         // The loss kernels modify P, Q, user_bias, and item_bias
         // Copy them back
         // TODO: avoid this entirely
-        if(cfg->P_reg > 0)
-            cudaMemcpy(P_device->data, P_device_target->data, user_count * cfg->n_factors * sizeof(float), cudaMemcpyDeviceToDevice);
-        if(cfg->Q_reg > 0)
-            cudaMemcpy(Q_device->data, Q_device_target->data, item_count * cfg->n_factors * sizeof(float), cudaMemcpyDeviceToDevice);
-        if(cfg->user_bias_reg > 0)
-            cudaMemcpy(user_bias_device, user_bias_target, user_count * sizeof(float), cudaMemcpyDeviceToDevice);
-        if(cfg->item_bias_reg > 0)
-            cudaMemcpy(item_bias_device, item_bias_target, item_count * sizeof(float), cudaMemcpyDeviceToDevice);
+        // if(cfg->P_reg > 0)
+        //     cudaMemcpy(P_device->data, P_device_target->data, user_count * cfg->n_factors * sizeof(float), cudaMemcpyDeviceToDevice);
+        // if(cfg->Q_reg > 0)
+        //     cudaMemcpy(Q_device->data, Q_device_target->data, item_count * cfg->n_factors * sizeof(float), cudaMemcpyDeviceToDevice);
+        // if(cfg->user_bias_reg > 0)
+        //     cudaMemcpy(user_bias_device, user_bias_target, user_count * sizeof(float), cudaMemcpyDeviceToDevice);
+        // if(cfg->item_bias_reg > 0)
+        //     cudaMemcpy(item_bias_device, item_bias_target, item_count * sizeof(float), cudaMemcpyDeviceToDevice);
 
-        lastError = cudaGetLastError();
-        if(cudaSuccess != lastError) {
-            printf("ERROR: %s\n", cudaGetErrorName(lastError));
-        }
+        // lastError = cudaGetLastError();
+        // if(cudaSuccess != lastError) {
+        //     printf("ERROR: %s\n", cudaGetErrorName(lastError));
+        // }
 
         // Swap old and new P and Q
         swap(P_device, P_device_target);
@@ -126,13 +154,6 @@ void train(CudaCSRMatrix* matrix, config::Config* cfg, float **P_ptr, float **Q_
         swap(item_bias_device, item_bias_target);
 
         cfg->cur_iterations += 1;
-
-        // Output current loss for this iteration
-        // WARNING - SLOW: Remove after debugging due to cudaMemcpy just for printing loss
-        if((i + 1) % 10 == 0) {
-            cudaMemcpy(losses, losses_device, cfg->total_iterations * sizeof(float), cudaMemcpyDeviceToHost);
-            cout << "Loss for Iteration " << i + 1 << ": " << losses[i] << "\n";
-        }
     }
     
     // Copy array of losses back to host
@@ -157,6 +178,12 @@ void train(CudaCSRMatrix* matrix, config::Config* cfg, float **P_ptr, float **Q_
     delete P_device_target;
     delete Q_device;
     delete Q_device_target;
+
+    // Free curand state
+    cudaFree(d_state);
+
+    // TODO: delete this
+    delete [] errors_host;
 }
 
 void train(CudaCSRMatrix* matrix, config::Config* cfg, float **P_ptr, float **Q_ptr, float **losses_ptr,
