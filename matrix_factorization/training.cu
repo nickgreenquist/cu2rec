@@ -20,7 +20,7 @@ void train(CudaCSRMatrix* matrix, config::Config* cfg, float **P_ptr, float **Q_
     cfg->set_cuda_variables();
 
     // Initialize P, Q has already been initialized
-    float *P = initialize_normal_array(user_count * cfg->n_factors);
+    float *P = initialize_normal_array(user_count * cfg->n_factors, cfg->n_factors);
     float *losses = new float[cfg->total_iterations];
     *P_ptr = P;
     *losses_ptr = losses;
@@ -44,7 +44,7 @@ void train(CudaCSRMatrix* matrix, config::Config* cfg, float **P_ptr, float **Q_
     cudaMemset(losses_device, 0, cfg->total_iterations * sizeof(float));
 
     // Create the bias array
-    float *user_bias = initialize_normal_array(user_count);
+    float *user_bias = initialize_normal_array(user_count, cfg->n_factors);
     *user_bias_ptr = user_bias;
     
     float *user_bias_device;
@@ -92,9 +92,6 @@ void train(CudaCSRMatrix* matrix, config::Config* cfg, float **P_ptr, float **Q_
             }
             cout << "Loss for Iteration " << i + 1 << ": " << total << "\n";
         }
-        for(int k = 0; k < matrix->nonzeros; k++) {
-            cout << errors_host[k] << "\n";
-        }
 
         // Set up random state
         initCurand<<<dim_grid_sgd, dim_block>>>(d_state, seed);
@@ -112,7 +109,7 @@ void train(CudaCSRMatrix* matrix, config::Config* cfg, float **P_ptr, float **Q_
 
         // Calculate total loss to check for improving loss
         // WARNING - SLOW: Remove after debugging due to cudaMemcpy just for printing loss
-        if((i + 1) % 5 == 0) {
+        if((i + 1) % 10 == 0) {
             // total_loss_kernel<<<dim_grid_loss, dim_block>>>(errors_device, losses_device, matrix->nonzeros, i, 1);
             // if(cfg->P_reg > 0)
             //     total_loss_kernel<<<dim_grid_P_reg_loss, dim_block>>>(P_device->data, losses_device, P_device->rows * P_device->cols, i, cfg->P_reg);
@@ -140,7 +137,7 @@ void train(CudaCSRMatrix* matrix, config::Config* cfg, float **P_ptr, float **Q_
             cout << "Loss for Iteration " << i + 1 << ": " << total << "\n";
 
             // Decrease learning rate
-            if((i+1) % 10 == 0) {
+            if((i+1) % 100 == 0) {
                 cfg->learning_rate *= .75;
                 cfg->set_cuda_variables();
                 cout << "LearningRage: " << cfg->learning_rate << "\n";
@@ -209,8 +206,8 @@ void train(CudaCSRMatrix* matrix, config::Config* cfg, float **P_ptr, float **Q_
            float **user_bias_ptr, float **item_bias_ptr, float global_bias) {
     int item_count = matrix->cols;
     // Initialize for regular training
-    float *Q = initialize_normal_array(item_count * cfg->n_factors);
-    float *item_bias = initialize_normal_array(item_count);
+    float *Q = initialize_normal_array(item_count * cfg->n_factors, cfg->n_factors);
+    float *item_bias = initialize_normal_array(item_count, cfg->n_factors);
     *Q_ptr = Q;
     *item_bias_ptr = item_bias;
     train(matrix, cfg, P_ptr, Q_ptr, Q, losses_ptr, user_bias_ptr, item_bias_ptr, item_bias, global_bias);

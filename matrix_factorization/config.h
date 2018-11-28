@@ -19,7 +19,7 @@ namespace config {
     class Config {
         public:
             int cur_iterations = 0;
-            int total_iterations = 100;
+            int total_iterations = 1000;
             int n_factors = 150;
             float learning_rate = 0.007;
             int seed = 42;
