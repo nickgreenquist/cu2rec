@@ -22,7 +22,7 @@ void test_sgd() {
     int n_factors = 1;
     config::Config *cfg = new config::Config();
     cfg->n_factors = n_factors;
-    cfg->learning_rate = 1e-3;
+    cfg->learning_rate = 0.07;
     cfg->P_reg = 1e-1;
     cfg->Q_reg = 1e-1;
     cfg->user_bias_reg = 1e-1;
@@ -86,14 +86,22 @@ void test_sgd() {
     cudaMalloc(&item_bias_target, cols * sizeof(float));
     cudaMemcpy(item_bias_target, item_bias, cols * sizeof(float), cudaMemcpyHostToDevice);
 
+    // Create curand state
+    curandState *d_state;
+    cudaMalloc(&d_state, sizeof(curandState));
 
     // Dimensions
     int n_threads = 32;
     dim3 dimBlock(n_threads);
     dim3 dimGrid(rows / n_threads + 1);
+
+    // Set up random state using iteration as seed
+    initCurand<<<dimGrid, dimBlock>>>(d_state, 1);
+
+    // Call SGD kernel
     sgd_update<<<dimGrid, dimBlock>>>(matrix->indptr, matrix->indices, P_device, Q_device, P_device_target, Q_device_target,
                                       errors_device, rows, cols, user_bias_device, item_bias_device, user_bias_target,
-                                      item_bias_target);
+                                      item_bias_target, d_state);
     std::swap(P_device, P_device_target);
     std::swap(Q_device, Q_device_target);
     std::swap(user_bias_device, user_bias_target);
@@ -112,22 +120,24 @@ void test_sgd() {
     cudaMemcpy(item_bias_updated, item_bias_device, cols * sizeof(float), cudaMemcpyDeviceToHost);
 
     // Assert all updated components are correct
-    vector<float> P_expected = {1.0036, 1.0027, 1.0027, 1.0027, 1.0027, 1.0018};
-    vector<float> Q_expected = {1.0036, 1.0045, 1.0036, 1.0018, 1.0027};
+    vector<float> P_expected = {1.063,1.063,1.063,1.063,1.063,1.063};
+    vector<float> Q_expected = {1.189,1,1,1.126,1.063};
     for(int i = 0; i < rows; ++i) {
         assert(fabs(P_expected.at(i) - P_updated[i]) < 1e-4);
     }
+
     for(int i = 0; i < cols; ++i) {
         assert(fabs(Q_expected.at(i) - Q_updated[i]) < 1e-4);
     }
 
     // Bias for user will be (0.0009) * num of items they have rated
-    vector<float> user_bias_expected = {1.0036, 1.0027, 1.0027, 1.0027, 1.0027, 1.0018};
+    vector<float> user_bias_expected = {1.063,1.063,1.063,1.063,1.063,1.063};
     // Bias for item will be (0.0009) * num of users have rated it
-    vector<float> item_bias_expected = {1.0036, 1.0045, 1.0036, 1.0018, 1.0027};
+    vector<float> item_bias_expected = {1.189,1,1,1.126,1.063};
     for(int i = 0; i < rows; i++) {
         assert(fabs(user_bias_expected.at(i) - user_bias_updated[i]) < 1e-4);
     }
+
     for(int i = 0; i < cols; i++) {
         assert(fabs(item_bias_expected.at(i) - item_bias_updated[i]) < 1e-4);
     }

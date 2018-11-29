@@ -37,13 +37,8 @@ void test_training_loop() {
 
     train(matrix, cfg, &P, &Q, &losses, &user_bias, &item_bias, global_bias);
 
-    cout << "Losses: ";
-    for(int i = 0; i < cfg->total_iterations; ++i) {
-        cout << losses[i] << " ";
-    }
-    cout << endl;
-
-    assert(losses[0] >= losses[cfg->total_iterations - 1]);
+    // we only calculate loss every 10th iteration, so compare first and last loss
+    assert(losses[0] >= losses[9]);
 
     // Free memory
     delete [] P;

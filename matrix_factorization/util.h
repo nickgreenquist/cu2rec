@@ -36,10 +36,10 @@ void printCSV(std::vector<Rating> *ratings);
 
 // Array and matrix utils
 
-float* initialize_normal_array(int size, float mean, float stddev, int seed);
-float* initialize_normal_array(int size, float mean, float stddev);
-float* initialize_normal_array(int size, int seed);
-float *initialize_normal_array(int size);
+float* initialize_normal_array(int size, int n_factors, float mean, float stddev, int seed);
+float* initialize_normal_array(int size, int n_factors, float mean, float stddev);
+float* initialize_normal_array(int size, int n_factors, int seed);
+float *initialize_normal_array(int size, int n_factors);
 cu2rec::CudaCSRMatrix* createSparseMatrix(std::vector<Rating> *ratings, int rows, int cols);
 
 #endif

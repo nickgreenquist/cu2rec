@@ -105,9 +105,9 @@ void printCSV(std::vector<Rating> *ratings) {
 
 // Array and matrix utils
 
-float* initialize_normal_array(int size, float mean, float stddev, int seed) {
+float* initialize_normal_array(int size, int n_factors, float mean, float stddev, int seed) {
     mt19937 generator(seed);
-    normal_distribution<float> distribution(mean, stddev);
+    normal_distribution<float> distribution(mean, stddev / n_factors);
     float *array = new float[size];
     for(int i = 0; i < size; ++i) {
         array[i] = distribution(generator);
@@ -115,16 +115,16 @@ float* initialize_normal_array(int size, float mean, float stddev, int seed) {
     return array;
 }
 
-float* initialize_normal_array(int size, float mean, float stddev) {
-    return initialize_normal_array(size, mean, stddev, 42);
+float* initialize_normal_array(int size, int n_factors, float mean, float stddev) {
+    return initialize_normal_array(size, n_factors, mean, stddev, 42);
 }
 
-float* initialize_normal_array(int size, int seed) {
-    return initialize_normal_array(size, 0, 1, seed);
+float* initialize_normal_array(int size, int n_factors, int seed) {
+    return initialize_normal_array(size, n_factors, 0, 1, seed);
 }
 
-float *initialize_normal_array(int size) {
-    return initialize_normal_array(size, 0, 1);
+float *initialize_normal_array(int size, int n_factors) {
+    return initialize_normal_array(size, n_factors, 0, 1);
 }
 
 cu2rec::CudaCSRMatrix* createSparseMatrix(std::vector<Rating> *ratings, int rows, int cols) {
