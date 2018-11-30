@@ -8,9 +8,11 @@
 /*************************/
 /* CURAND INITIALIZATION */
 /*************************/
-__global__ void initCurand(curandState *state, unsigned long seed){
+__global__ void initCurand(curandState *state, unsigned long seed, int n_rows){
     int x = blockDim.x * blockIdx.x + threadIdx.x;
-    curand_init(seed, x, 0, &state[x]);
+    if(x < n_rows && x < 1000) {
+        curand_init(seed, x, 0, &state[x]);
+    }
 }
 
 __global__ void sgd_update(int *indptr, int *indices, float *P, float *Q, float *P_target, float *Q_target, 
@@ -23,7 +25,7 @@ __global__ void sgd_update(int *indptr, int *indices, float *P, float *Q, float 
         // pick a random y_i
         int low = indptr[x];
         int high = indptr[x+1];
-        float myrandf = curand_uniform(&my_curandstate[x]);
+        float myrandf = curand_uniform(&my_curandstate[x % 1000]);
         myrandf *= (high - low + 0.999999);
         myrandf += low;
         int y_i = (int)truncf(myrandf);

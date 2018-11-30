@@ -81,7 +81,7 @@ void train(CudaCSRMatrix* matrix, config::Config* cfg, float **P_ptr, float **Q_
                            errors_device, user_bias_device, item_bias_device, global_bias);
 
         // Set up random state using iteration as seed
-        initCurand<<<dim_grid_sgd, dim_block>>>(d_state, i + 1);
+        initCurand<<<dim_grid_sgd, dim_block>>>(d_state, i + 1, user_count);
 
         // Run single iteration of SGD
         sgd_update<<<dim_grid_sgd, dim_block>>>(matrix->indptr, matrix->indices, P_device->data, Q_device->data,
@@ -97,14 +97,18 @@ void train(CudaCSRMatrix* matrix, config::Config* cfg, float **P_ptr, float **Q_
         // TODO: remove for performance testing since copying memory back to host is slow
         if((i + 1) % 10 == 0 || i == 0) {
             cudaMemcpy(errors_host, errors_device, matrix->nonzeros * sizeof(float), cudaMemcpyDeviceToHost);
-            float total = 0.0;
+            float mae = 0.0;
+            float rmse = 0.0;
             for(int k = 0; k <  matrix->nonzeros; k++) {
-                total += abs(errors_host[k]);
+                mae += abs(errors_host[k]);
+                rmse += errors_host[k] * errors_host[k];
             }
-            cout << "Loss for Iteration " << i + 1 << ": " << total << "\n";
+            mae /= matrix->nonzeros;
+            rmse = sqrt(rmse / matrix->nonzeros);
+            printf("Iteration %d MAE: %f RMSE %f\n", i + 1, mae, rmse);
 
             // add this loss to losses that will be sent back to host
-            losses[i] = total;
+            losses[i] = mae;
         }
 
         // TODO: Uncomment after we fix total_loss kernel to sum the errors vector
