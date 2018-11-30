@@ -34,18 +34,18 @@ __global__ void sgd_update(int *indptr, int *indices, float *P, float *Q, float 
             int q_index = index(y, f, config::n_factors);
 
             // Update P
-            P_target[p_index] += config::learning_rate * (errors[y_i] * Q[q_index] - config::P_reg * P[p_index]);
+            P_target[p_index] = P[p_index] + config::learning_rate * (errors[y_i] * Q[q_index] - config::P_reg * P[p_index]);
 
             // Only update Q if train flag is true
             if(config::is_train) {
-                atomicAdd(&Q_target[q_index], config::learning_rate * (errors[y_i] * P[p_index] - config::Q_reg * Q[q_index]));
+                Q_target[q_index] = Q[q_index] + config::learning_rate * (errors[y_i] * P[p_index] - config::Q_reg * Q[q_index]);
             }
         }
 
         // update biases
-        user_bias_target[x] += config::learning_rate * (errors[y_i] - config::user_bias_reg * user_bias[x]);
+        user_bias_target[x] = user_bias[x] + config::learning_rate * (errors[y_i] - config::user_bias_reg * user_bias[x]);
         if(config::is_train) {
-            atomicAdd(&item_bias_target[y], config::learning_rate * (errors[y_i] - config::item_bias_reg * item_bias[y]));
+            item_bias_target[y] = item_bias[y] + config::learning_rate * (errors[y_i] - config::item_bias_reg * item_bias[y]);
         }
 
         // TODO: remove old loop over all items once we agree on one item per user SGD
