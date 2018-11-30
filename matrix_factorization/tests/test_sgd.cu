@@ -120,18 +120,19 @@ void test_sgd() {
     cudaMemcpy(user_bias_updated, user_bias_device, rows * sizeof(float), cudaMemcpyDeviceToHost);
     cudaMemcpy(item_bias_updated, item_bias_device, cols * sizeof(float), cudaMemcpyDeviceToHost);
 
-
-    // check for any nan values in any components
+    // check for correct components
+    vector<float> P_expected = {1.063,1.063,1.063,1.063,1.063,1.063};
     for(int i = 0; i < rows; ++i) {
-        assert(!std::isnan(P_updated[i]));
+        assert(fabs(P_expected.at(i) - P_updated[i]) < 1e-4);
     }
     for(int i = 0; i < cols; ++i) {
         assert(!std::isnan(Q_updated[i]));
     }
-    for(int i = 0; i < rows; i++) {
-        assert(!std::isnan(user_bias_updated[i]));
-    }
 
+    vector<float> user_bias_expected = {1.063,1.063,1.063,1.063,1.063,1.063};
+    for(int i = 0; i < rows; i++) {
+        assert(fabs(user_bias_expected.at(i) - user_bias_updated[i]) < 1e-4);
+    }
     for(int i = 0; i < cols; i++) {
         assert(!std::isnan(item_bias_updated[i]));
     }

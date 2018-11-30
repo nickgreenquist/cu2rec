@@ -3,7 +3,7 @@ import random
 import os
 import sys
 
-def split_by_user(rows, train_percent):
+def split_per_user(rows, train_percent):
     # create a map for each user to a list of the ratings of that user
     user_to_ratings = {}
     for rating in rows:
@@ -70,7 +70,10 @@ def read_ratings(filename):
 if __name__ == "__main__":
     if len(sys.argv) < 2:
         sys.exit('ERROR: Please provide a ratings file to split into train/test')
+    if len(sys.argv) < 3:
+        sys.exit('ERROR: Please provide percentage of ratings for training set')
     filename = sys.argv[1]
+    percent_train = float(sys.argv[2])
 
     rows = read_ratings(filename)
 
