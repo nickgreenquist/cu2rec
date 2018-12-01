@@ -1,3 +1,4 @@
+#include <math.h>
 #include <stdio.h>
 
 #include "config.h"
@@ -10,7 +11,7 @@
 /*************************/
 __global__ void initCurand(curandState *state, unsigned long seed, int n_rows){
     int x = blockDim.x * blockIdx.x + threadIdx.x;
-    if(x < n_rows && x < 1000) {
+    if(x < n_rows) {
         curand_init(seed, x, 0, &state[x]);
     }
 }
@@ -21,14 +22,11 @@ __global__ void sgd_update(int *indptr, int *indices, float *P, float *Q, float 
     // One thread per user
     int x = blockDim.x * blockIdx.x + threadIdx.x;
     if(x < n_rows) {
-        
         // pick a random y_i
         int low = indptr[x];
         int high = indptr[x+1];
-        float myrandf = curand_uniform(&my_curandstate[x % 1000]);
-        myrandf *= (high - low + 0.999999);
-        myrandf += low;
-        int y_i = (int)truncf(myrandf);
+        float myrandf = curand_uniform(&my_curandstate[x]); // random between (0, 1]
+        int y_i = (int) ceil(myrandf * (high - low)) - 1 + low;
 
         int y = indices[y_i];
         for(int f = 0; f < config::n_factors; ++f) {

@@ -89,7 +89,7 @@ void test_sgd() {
 
     // Create curand state
     curandState *d_state;
-    cudaMalloc(&d_state, sizeof(curandState));
+    cudaMalloc(&d_state, rows * sizeof(curandState));
 
     // Dimensions
     int n_threads = 32;

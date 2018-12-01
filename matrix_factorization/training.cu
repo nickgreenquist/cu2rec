@@ -75,7 +75,7 @@ void train(CudaCSRMatrix* train_matrix, CudaCSRMatrix* test_matrix, config::Conf
 
     // Create curand state
     curandState *d_state;
-    cudaMalloc(&d_state, sizeof(curandState));
+    cudaMalloc(&d_state, user_count * sizeof(curandState));
 
     // Training loop
     cudaError_t lastError;
