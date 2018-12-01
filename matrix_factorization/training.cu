@@ -1,5 +1,6 @@
 #include <random>
 #include <cmath>
+#include <time.h>
 
 #include "config.h"
 #include "loss.h"
@@ -77,25 +78,35 @@ void train(CudaCSRMatrix* train_matrix, CudaCSRMatrix* test_matrix, config::Conf
     curandState *d_state;
     cudaMalloc(&d_state, user_count * sizeof(curandState));
 
+     // to measure time taken by a specific part of the code 
+    double time_taken;
+    clock_t start, end;
+
+    double time_taken_loss;
+    clock_t start_loss, end_loss;
+
     // Training loop
     cudaError_t lastError;
+    start = clock();
     for (int i = 0; i < cfg->total_iterations; ++i) {
         // Calculate initial error per each rating
-        calculate_loss_gpu(P_device, Q_device, cfg->n_factors, user_count, item_count, train_matrix->nonzeros, train_matrix,
-                           errors_device, user_bias_device, item_bias_device, global_bias);
+        // calculate_loss_gpu(P_device, Q_device, cfg->n_factors, user_count, item_count, train_matrix->nonzeros, train_matrix,
+        //                    errors_device, user_bias_device, item_bias_device, global_bias);
 
         // Calculate error on test ratings
-        calculate_loss_gpu(P_device, Q_device, cfg->n_factors, test_matrix->rows, test_matrix->cols, test_matrix->nonzeros, test_matrix,
-                           errors_test_device, user_bias_device, item_bias_device, global_bias);
+        // calculate_loss_gpu(P_device, Q_device, cfg->n_factors, test_matrix->rows, test_matrix->cols, test_matrix->nonzeros, test_matrix,
+        //                    errors_test_device, user_bias_device, item_bias_device, global_bias);
 
         // Set up random state using iteration as seed
         initCurand<<<dim_grid_sgd, dim_block>>>(d_state, i + 1, user_count);
 
         // Run single iteration of SGD
-        sgd_update<<<dim_grid_sgd, dim_block>>>(train_matrix->indptr, train_matrix->indices, P_device->data, Q_device->data,
-                                                P_device_target->data, Q_device_target->data, errors_device,
+        float shared_mem_size = (user_count + item_count) * sizeof(float);
+        sgd_update<<<dim_grid_sgd, dim_block, shared_mem_size>>>(train_matrix->indptr, train_matrix->indices, train_matrix->data, P_device->data, Q_device->data,
+                                                Q_device_target->data, errors_device,
                                                 user_count, item_count, user_bias_device, item_bias_device,
-                                                user_bias_target, item_bias_target, d_state);
+                                                item_bias_target, d_state,
+                                                global_bias);
         lastError = cudaGetLastError();
         if(cudaSuccess != lastError) {
             printf("ERROR: %s\n", cudaGetErrorName(lastError));
@@ -103,7 +114,18 @@ void train(CudaCSRMatrix* train_matrix, CudaCSRMatrix* test_matrix, config::Conf
 
         // Calculate total loss periodically
         // TODO: remove for performance testing since copying memory back to host is slow
-        if((i + 1) % 10 == 0 || i == 0) {
+        if((i + 1) % cfg->total_iterations == 0 || i == 0) {
+        // if((i + 1) % 10 == 0 || i == 0) {
+            start_loss = clock();
+
+            // Calculate initial error per each rating
+            calculate_loss_gpu(P_device, Q_device, cfg->n_factors, user_count, item_count, train_matrix->nonzeros, train_matrix,
+                               errors_device, user_bias_device, item_bias_device, global_bias);
+
+            // Calculate error on test ratings
+            calculate_loss_gpu(P_device, Q_device, cfg->n_factors, test_matrix->rows, test_matrix->cols, test_matrix->nonzeros, test_matrix,
+                               errors_test_device, user_bias_device, item_bias_device, global_bias);
+
             // Calculate loss on Training data
             cudaMemcpy(errors_host, errors_device, train_matrix->nonzeros * sizeof(float), cudaMemcpyDeviceToHost);
             float mae = 0.0;
@@ -130,7 +152,11 @@ void train(CudaCSRMatrix* train_matrix, CudaCSRMatrix* test_matrix, config::Conf
             }
             mae /= test_matrix->nonzeros;
             rmse = sqrt(rmse / test_matrix->nonzeros);
-            printf("TEST: Iteration %d MAE: %f RMSE %f\n\n", i + 1, mae, rmse);
+            printf("TEST: Iteration %d MAE: %f RMSE %f\n", i + 1, mae, rmse);
+
+            end_loss = clock();
+            time_taken_loss = ((double)(end_loss - start_loss))/ CLOCKS_PER_SEC;   
+            printf("Time taken to calculate total loss is %lf\n\n", time_taken_loss);
         }
 
         // TODO: Uncomment after we fix total_loss kernel to sum the errors vector
@@ -167,16 +193,19 @@ void train(CudaCSRMatrix* train_matrix, CudaCSRMatrix* test_matrix, config::Conf
         //     printf("ERROR: %s\n", cudaGetErrorName(lastError));
         // }
 
-        // Swap old and new P and Q
-        swap(P_device, P_device_target);
+        // Swap item related components
         swap(Q_device, Q_device_target);
-
-        // Swap old and new bias arrays
-        swap(user_bias_device, user_bias_target);
         swap(item_bias_device, item_bias_target);
 
         cfg->cur_iterations += 1;
+
+        cudaDeviceSynchronize();
     }
+    end = clock();
+
+    // Output time taken
+    time_taken = ((double)(end - start))/ CLOCKS_PER_SEC;   
+    printf("Time taken for %d of iterations is %lf\n", cfg->total_iterations, time_taken);
     
     // Copy array of losses back to host
     // TODO: uncomment once we fix total_loss kernel

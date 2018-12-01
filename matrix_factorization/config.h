@@ -21,7 +21,7 @@ namespace config {
             int cur_iterations = 0;
             int total_iterations = 1000;
             int n_factors = 150;
-            float learning_rate = 0.007;
+            float learning_rate = 0.07;
             int seed = 42;
             float P_reg = 0.08;
             float Q_reg = 0.1;
