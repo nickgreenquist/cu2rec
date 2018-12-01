@@ -89,19 +89,12 @@ void train(CudaCSRMatrix* train_matrix, CudaCSRMatrix* test_matrix, config::Conf
     cudaError_t lastError;
     start = clock();
     for (int i = 0; i < cfg->total_iterations; ++i) {
-        // Calculate initial error per each rating
-        // calculate_loss_gpu(P_device, Q_device, cfg->n_factors, user_count, item_count, train_matrix->nonzeros, train_matrix,
-        //                    errors_device, user_bias_device, item_bias_device, global_bias);
-
-        // Calculate error on test ratings
-        // calculate_loss_gpu(P_device, Q_device, cfg->n_factors, test_matrix->rows, test_matrix->cols, test_matrix->nonzeros, test_matrix,
-        //                    errors_test_device, user_bias_device, item_bias_device, global_bias);
 
         // Set up random state using iteration as seed
         initCurand<<<dim_grid_sgd, dim_block>>>(d_state, i + 1, user_count);
 
         // Run single iteration of SGD
-        float shared_mem_size = (user_count + item_count) * sizeof(float);
+        float shared_mem_size = user_count * sizeof(float);
         sgd_update<<<dim_grid_sgd, dim_block, shared_mem_size>>>(train_matrix->indptr, train_matrix->indices, train_matrix->data, P_device->data, Q_device->data,
                                                 Q_device_target->data, errors_device,
                                                 user_count, item_count, user_bias_device, item_bias_device,

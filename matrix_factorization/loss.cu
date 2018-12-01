@@ -17,19 +17,12 @@ using namespace cu2rec;
 extern __shared__ float biases[];
 __global__ void loss_kernel(int factors, int user_count, int item_count, const float * P, const float * Q, const int * indptr, 
                             const int * indices, const float * data, float * error, float * user_bias, float * item_bias, float global_bias) {
-    float* s_user_bias = (float*)biases;
-    float* s_item_bias = (float*)&s_user_bias[user_count];
 
     // use first warp to load in user_biases
+    float* s_user_bias = (float*)biases;
     if(threadIdx.x < warp_size) {
         for(int i = 0; i < user_count; i += warp_size) {
             s_user_bias[i] = user_bias[i];
-        }
-    }
-    // use second warp to load in item_biases
-    if(threadIdx.x >= warp_size && threadIdx.x < 2*warp_size) {
-        for(int i = 0; i < item_count; i += warp_size) {
-            s_item_bias[i] = item_bias[i];
         }
     }
     // sync all threads before accessing any shared memory
@@ -44,7 +37,7 @@ __global__ void loss_kernel(int factors, int user_count, int item_count, const f
 
         for (int i = indptr[u]; i < indptr[u + 1]; ++i) {
             int item_id = indices[i];
-            error[i] = get_prediction(factors, p, &Q[item_id * factors], data, i, ub, s_item_bias[item_id], global_bias);
+            error[i] = get_prediction(factors, p, &Q[item_id * factors], data, i, ub, item_bias[item_id], global_bias);
         }
     }
 }
@@ -74,7 +67,7 @@ void calculate_loss_gpu(CudaDenseMatrix* P_d, CudaDenseMatrix* Q_d, int factors,
     int n_threads = 32;
     dim3 dimBlock(n_threads);
     dim3 dimGrid(user_count / n_threads + 1);
-    float shared_mem_size = (user_count + item_count) * sizeof(float);
+    float shared_mem_size = user_count * sizeof(float);
     loss_kernel<<<dimGrid, dimBlock, shared_mem_size>>>(
         factors, user_count, item_count, P_d->data, Q_d->data,
         matrix->indptr, matrix->indices, matrix->data, error_d,

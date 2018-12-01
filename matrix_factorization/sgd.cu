@@ -23,19 +23,11 @@ __global__ void sgd_update(int *indptr, int *indices, const float *data,float *P
                            float *item_bias_target, curandState *my_curandstate,
                             float global_bias) {
 
-    float* s_user_bias = (float*)biases;
-    float* s_item_bias = (float*)&s_user_bias[n_rows];
-
     // use first warp to load in user_biases
+    float* s_user_bias = (float*)biases;
     if(threadIdx.x < warp_size) {
         for(int i = 0; i < n_rows; i += warp_size) {
             s_user_bias[i] = user_bias[i];
-        }
-    }
-    // use second warp to load in item_biases
-    if(threadIdx.x >= warp_size && threadIdx.x < 2*warp_size) {
-        for(int i = 0; i < n_cols; i += warp_size) {
-            s_item_bias[i] = item_bias[i];
         }
     }
     // sync all threads before accessing any shared memory
@@ -53,8 +45,7 @@ __global__ void sgd_update(int *indptr, int *indices, const float *data,float *P
 
         // get the error random item y_i
         int item_id = indices[y_i];
-        float error_y_i = get_prediction(config::n_factors, &P[x * config::n_factors], &Q[item_id * config::n_factors], data, y_i, s_user_bias[x], s_item_bias[item_id], global_bias);
-
+        float error_y_i = get_prediction(config::n_factors, &P[x * config::n_factors], &Q[item_id * config::n_factors], data, y_i, s_user_bias[x], item_bias[item_id], global_bias);
 
         int y = indices[y_i];
         for(int f = 0; f < config::n_factors; ++f) {
