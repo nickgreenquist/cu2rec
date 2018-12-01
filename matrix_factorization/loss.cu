@@ -41,14 +41,14 @@ __global__ void loss_kernel(int factors, int user_count, int item_count, const f
 // and https://devblogs.nvidia.com/using-shared-memory-cuda-cc/
 // Fixes the problems related to data sizes
 template <unsigned int block_size>
-__global__ void total_loss_kernel(float *in_errors, float *out_errors, int n_errors) {
+__global__ void total_loss_kernel(float *in_errors, float *out_errors, int n_errors, ErrorType error_type) {
     extern __shared__ float sdata[];
     unsigned int tid = threadIdx.x;
     unsigned int i = blockIdx.x * block_size + tid;
     unsigned int grid_size = block_size * gridDim.x;
     sdata[tid] = 0;
     while (i < n_errors) {
-        sdata[tid] += pow(in_errors[i], 2);
+        sdata[tid] += error_type == RMSE ? pow(in_errors[i], 2) : abs(in_errors[i]);
         i += grid_size;
     }
     __syncthreads();
