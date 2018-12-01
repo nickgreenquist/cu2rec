@@ -35,7 +35,8 @@ void test_training_loop() {
 
     float *P, *Q, *losses, *user_bias, *item_bias;
 
-    train(matrix, cfg, &P, &Q, &losses, &user_bias, &item_bias, global_bias);
+    // user matrix as both train and test for sake of testing
+    train(matrix, matrix, cfg, &P, &Q, &losses, &user_bias, &item_bias, global_bias);
 
     // we only calculate loss every 10th iteration, so compare first and last loss
     assert(losses[0] >= losses[9]);

@@ -23,12 +23,19 @@ int main(int argc, char **argv){
         }
     }
 
-    // Load in data
-    string file_path = argv[optind++];
+    // Load in train data
+    string file_path_train = argv[optind++];
     int rows, cols;
     float global_bias;
-    std::vector<Rating> ratings = readCSV(file_path, &rows, &cols, &global_bias);
-    cu2rec::CudaCSRMatrix* matrix = createSparseMatrix(&ratings, rows, cols);
+    std::vector<Rating> train_ratings = readCSV(file_path_train, &rows, &cols, &global_bias);
+    cu2rec::CudaCSRMatrix* train_matrix = createSparseMatrix(&train_ratings, rows, cols);
+
+    // Load in test data
+    string file_path_test = argv[optind++];
+    int r, c;
+    float gb;
+    std::vector<Rating> test_ratings = readCSV(file_path_test, &r, &c, &gb);
+    cu2rec::CudaCSRMatrix* test_matrix = createSparseMatrix(&test_ratings, r, c);
 
     // Hyperparams
     config::Config *cfg = new config::Config();
@@ -38,19 +45,19 @@ int main(int argc, char **argv){
 
     // Create components and train on ratings
     float *P, *Q, *losses, *user_bias, *item_bias;
-    train(matrix, cfg, &P, &Q, &losses, &user_bias, &item_bias, global_bias);
+    train(train_matrix, test_matrix, cfg, &P, &Q, &losses, &user_bias, &item_bias, global_bias);
 
     // Write output to files
     // TODO: make this work on Windows, because it will probably fail
-    size_t dir_index = file_path.find_last_of("/"); 
+    size_t dir_index = file_path_train.find_last_of("/"); 
     string parent_dir, filename;
     if(dir_index != string::npos) {
-        parent_dir = file_path.substr(0, dir_index);
-        filename = file_path.substr(dir_index + 1);
+        parent_dir = file_path_train.substr(0, dir_index);
+        filename = file_path_train.substr(dir_index + 1);
     } else {
         // doesn't have directory, therefore working on current directory
         parent_dir = ".";
-        filename = file_path;
+        filename = file_path_train;
     }
     size_t dot_index = filename.find_last_of("."); 
     string basename = filename.substr(0, dot_index);
@@ -68,7 +75,8 @@ int main(int argc, char **argv){
 
     // Free memory
     delete cfg;
-    delete matrix;
+    delete train_matrix;
+    delete test_matrix;
     delete [] P;
     delete [] Q;
     delete [] losses;
