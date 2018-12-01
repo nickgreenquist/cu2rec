@@ -155,3 +155,10 @@ cu2rec::CudaCSRMatrix* createSparseMatrix(std::vector<Rating> *ratings, int rows
     return matrix;
 }
 
+__device__ float get_prediction(int factors, const float *p, const float *q, float user_bias, float item_bias, float global_bias) {
+        float pred = global_bias + user_bias + item_bias;
+        for (int f = 0; f < factors; f++)
+            pred += q[f]*p[f];
+        return pred;
+}
+

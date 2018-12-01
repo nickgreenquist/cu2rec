@@ -2,6 +2,7 @@
 #define CU2REC_TRAINING
 
 #include <cuda.h>
+#include <cuda_device_runtime_api.h>
 
 #include "config.h"
 #include "matrix.h"
