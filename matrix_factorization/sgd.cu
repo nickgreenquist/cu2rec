@@ -47,7 +47,7 @@ __global__ void sgd_update(int *indptr, int *indices, const float *data,float *P
 
         // get the error random item y_i
         int item_id = indices[y_i];
-        float error_y_i = get_prediction(config::n_factors, &P[x * config::n_factors], &Q[item_id * config::n_factors], data, y_i, s_user_bias[x], item_bias[item_id], global_bias);
+        float error_y_i = data[y_i] - get_prediction(config::n_factors, &P[x * config::n_factors], &Q[item_id * config::n_factors], s_user_bias[x], item_bias[item_id], global_bias);
 
         int y = indices[y_i];
         for(int f = 0; f < config::n_factors; ++f) {

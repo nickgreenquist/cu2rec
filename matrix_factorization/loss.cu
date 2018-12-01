@@ -40,7 +40,7 @@ __global__ void loss_kernel(int factors, int user_count, int item_count, const f
 
         for (int i = indptr[u]; i < indptr[u + 1]; ++i) {
             int item_id = indices[i];
-            error[i] = get_prediction(factors, p, &Q[item_id * factors], data, i, ub, item_bias[item_id], global_bias);
+            error[i] = data[i] - get_prediction(factors, p, &Q[item_id * factors], ub, item_bias[item_id], global_bias);
         }
     }
 }
