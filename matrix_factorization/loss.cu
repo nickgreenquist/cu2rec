@@ -18,10 +18,11 @@ extern __shared__ float biases[];
 __global__ void loss_kernel(int factors, int user_count, int item_count, const float * P, const float * Q, const int * indptr, 
                             const int * indices, const float * data, float * error, float * user_bias, float * item_bias, float global_bias) {
 
+    // TODO: Only load in user_bias values that this block's threads will hit
     // use first warp to load in user_biases
     float* s_user_bias = (float*)biases;
     if(threadIdx.x < warp_size) {
-        for(int i = 0; i < user_count; i += warp_size) {
+        for(int i = threadIdx.x; i < user_count; i += warp_size) {
             s_user_bias[i] = user_bias[i];
         }
     }

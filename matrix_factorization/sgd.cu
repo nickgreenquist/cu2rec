@@ -23,10 +23,11 @@ __global__ void sgd_update(int *indptr, int *indices, const float *data,float *P
                            float *item_bias_target, curandState *my_curandstate,
                             float global_bias) {
 
+    // TODO: Only load in user_bias values that this block's threads will hit
     // use first warp to load in user_biases
     float* s_user_bias = (float*)biases;
     if(threadIdx.x < warp_size) {
-        for(int i = 0; i < n_rows; i += warp_size) {
+        for(int i = threadIdx.x; i < n_rows; i += warp_size) {
             s_user_bias[i] = user_bias[i];
         }
     }
