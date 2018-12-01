@@ -191,9 +191,8 @@ void train(CudaCSRMatrix* train_matrix, CudaCSRMatrix* test_matrix, config::Conf
         swap(item_bias_device, item_bias_target);
 
         cfg->cur_iterations += 1;
-
-        cudaDeviceSynchronize();
     }
+    cudaDeviceSynchronize();
     end = clock();
 
     // Output time taken

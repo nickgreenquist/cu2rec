@@ -17,15 +17,16 @@ __global__ void initCurand(curandState *state, unsigned long seed, int n_rows){
     }
 }
 
-extern __shared__ float biases[];
 __global__ void sgd_update(int *indptr, int *indices, const float *data,float *P, float *Q, float *Q_target, 
                            float *errors, int n_rows, int n_cols, float *user_bias, float *item_bias,
                            float *item_bias_target, curandState *my_curandstate,
                             float global_bias) {
 
+    extern __shared__ float s_memory[];
+    float* s_user_bias = (float*)s_memory;
+
     // TODO: Only load in user_bias values that this block's threads will hit
     // use first warp to load in user_biases
-    float* s_user_bias = (float*)biases;
     if(threadIdx.x < warp_size) {
         for(int i = threadIdx.x; i < n_rows; i += warp_size) {
             s_user_bias[i] = user_bias[i];
@@ -55,6 +56,8 @@ __global__ void sgd_update(int *indptr, int *indices, const float *data,float *P
 
             // update components
             P[p_index] += config::learning_rate * (error_y_i * Q[q_index] - config::P_reg * P[p_index]);
+
+            // Only update Q if train flag is true
             if(config::is_train) {
                 Q_target[q_index] = Q[q_index] + config::learning_rate * (error_y_i * P[p_index] - config::Q_reg * Q[q_index]);
             }
@@ -62,6 +65,8 @@ __global__ void sgd_update(int *indptr, int *indices, const float *data,float *P
 
         // update biases
         user_bias[x] += config::learning_rate * (error_y_i - config::user_bias_reg * user_bias[x]);
+
+        // Only update item_bias if train flag is true
         if(config::is_train) {
             item_bias_target[y] = item_bias[y] + config::learning_rate * (error_y_i - config::item_bias_reg * item_bias[y]);
         }
