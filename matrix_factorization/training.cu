@@ -12,6 +12,50 @@
 using namespace cu2rec;
 using namespace std;
 
+// Inspired by https://developer.download.nvidia.com/assets/cuda/files/reduction.pdf
+// and https://devblogs.nvidia.com/using-shared-memory-cuda-cc/
+// Fixes the problems related to data sizes
+float calculate_total_loss(float *in_errors, float *out_errors, float *out_errors_host, int n_errors, int grid_size, int block_size) {
+    switch(block_size) {
+        case 512:
+            total_loss_kernel<512><<<grid_size, block_size, 512 * sizeof(float)>>>(in_errors, out_errors, n_errors);
+            break;
+        case 256:
+            total_loss_kernel<256><<<grid_size, block_size, 256 * sizeof(float)>>>(in_errors, out_errors, n_errors);
+            break;
+        case 128:
+            total_loss_kernel<128><<<grid_size, block_size, 128 * sizeof(float)>>>(in_errors, out_errors, n_errors);
+            break;
+        case 64:
+            total_loss_kernel< 64><<<grid_size, block_size,  64 * sizeof(float)>>>(in_errors, out_errors, n_errors);
+            break;
+        case 32:
+            total_loss_kernel< 32><<<grid_size, block_size,  32 * sizeof(float)>>>(in_errors, out_errors, n_errors);
+            break;
+        case 16:
+            total_loss_kernel< 16><<<grid_size, block_size,  16 * sizeof(float)>>>(in_errors, out_errors, n_errors);
+            break;
+        case 8:
+            total_loss_kernel<  8><<<grid_size, block_size,   8 * sizeof(float)>>>(in_errors, out_errors, n_errors);
+            break;
+        case 4:
+            total_loss_kernel<  4><<<grid_size, block_size,   4 * sizeof(float)>>>(in_errors, out_errors, n_errors);
+            break;
+        case 2:
+            total_loss_kernel<  2><<<grid_size, block_size,   2 * sizeof(float)>>>(in_errors, out_errors, n_errors);
+            break;
+        case 1:
+            total_loss_kernel<  1><<<grid_size, block_size,   1 * sizeof(float)>>>(in_errors, out_errors, n_errors);
+            break;
+    }
+    cudaMemcpy(out_errors_host, out_errors, grid_size * sizeof(float), cudaMemcpyDeviceToHost);
+    float total = 0;
+    for(int k = 0; k < grid_size; k++) {
+        total += out_errors_host[k];
+    }
+    return sqrt(total / n_errors);
+}
+
 void train(CudaCSRMatrix* matrix, config::Config* cfg, float **P_ptr, float **Q_ptr, float *Q, float **losses_ptr,
            float **user_bias_ptr, float **item_bias_ptr, float *item_bias, float global_bias) {
     int user_count = matrix->rows;
@@ -34,11 +78,6 @@ void train(CudaCSRMatrix* matrix, config::Config* cfg, float **P_ptr, float **Q_
     float *errors_host = new float[matrix->nonzeros];
     float *errors_device;
     cudaMalloc(&errors_device, matrix->nonzeros * sizeof(float));
-
-    // Create the total losses
-    float *losses_device;
-    cudaMalloc(&losses_device, cfg->total_iterations * sizeof(float));
-    cudaMemset(losses_device, 0, cfg->total_iterations * sizeof(float));
 
     // Create the bias array
     float *user_bias = initialize_normal_array(user_count, cfg->n_factors);
@@ -63,15 +102,22 @@ void train(CudaCSRMatrix* matrix, config::Config* cfg, float **P_ptr, float **Q_
     int n_threads = 32;
     dim3 dim_block(n_threads);
     dim3 dim_grid_sgd(user_count / n_threads + 1);
-    dim3 dim_grid_loss(matrix->nonzeros / n_threads + 1);
+    dim3 dim_grid_loss(256);
+    dim3 dim_block_loss(64); // Must be 2^0 to 2^9
     dim3 dim_grid_P_reg_loss(P_device->rows * P_device->cols / n_threads + 1);
     dim3 dim_grid_Q_reg_loss(Q_device->rows * Q_device->cols / n_threads + 1);
     dim3 dim_grid_user_bias_reg_loss(user_count / n_threads + 1);
     dim3 dim_grid_item_bias_reg_loss(item_count / n_threads + 1);
 
+    // Create loss per block
+    float *block_errors_host = new float[dim_grid_loss.x];
+    float *block_errors_device;
+    cudaMalloc(&block_errors_device, dim_grid_loss.x * sizeof(float));
+    cudaMemset(block_errors_device, 0, dim_grid_loss.x * sizeof(float));
+
     // Create curand state
     curandState *d_state;
-    cudaMalloc(&d_state, sizeof(curandState));
+    cudaMalloc(&d_state, user_count * sizeof(curandState));
 
     // Training loop
     cudaError_t lastError;
@@ -111,9 +157,10 @@ void train(CudaCSRMatrix* matrix, config::Config* cfg, float **P_ptr, float **Q_
             losses[i] = mae;
         }
 
-        // TODO: Uncomment after we fix total_loss kernel to sum the errors vector
-        // // Calculate total loss to check for improving loss
-        // total_loss_kernel<<<dim_grid_loss, dim_block>>>(errors_device, losses_device, matrix->nonzeros, i, 1);
+        // Calculate total loss to check for improving loss
+        float total_loss = calculate_total_loss(errors_device, block_errors_device, block_errors_host, matrix->nonzeros, dim_grid_loss.x, dim_block_loss.x);
+        printf("Iteration %d GPU RMSE %f\n", i + 1, total_loss);
+        losses[i] = total_loss;
         // if(cfg->P_reg > 0)
         //     total_loss_kernel<<<dim_grid_P_reg_loss, dim_block>>>(P_device->data, losses_device, P_device->rows * P_device->cols, i, cfg->P_reg);
         // if(cfg->Q_reg > 0)
@@ -123,10 +170,10 @@ void train(CudaCSRMatrix* matrix, config::Config* cfg, float **P_ptr, float **Q_
         // if(cfg->item_bias_reg > 0)
         //     total_loss_kernel<<<dim_grid_item_bias_reg_loss, dim_block>>>(item_bias_device, losses_device, item_count, i, cfg->item_bias_reg);
 
-        // lastError = cudaGetLastError();
-        // if(cudaSuccess != lastError) {
-        //     printf("ERROR: %s\n", cudaGetErrorName(lastError));
-        // }
+        lastError = cudaGetLastError();
+        if(cudaSuccess != lastError) {
+            printf("ERROR: %s\n", cudaGetErrorName(lastError));
+        }
 
         // // The loss kernels modify P, Q, user_bias, and item_bias
         // // Copy them back
@@ -156,9 +203,6 @@ void train(CudaCSRMatrix* matrix, config::Config* cfg, float **P_ptr, float **Q_
         cfg->cur_iterations += 1;
     }
     
-    // Copy array of losses back to host
-    // TODO: uncomment once we fix total_loss kernel
-    // cudaMemcpy(losses, losses_device, cfg->total_iterations * sizeof(float), cudaMemcpyDeviceToHost);
 
     // Copy updated P and Q back
     P_device->to_host(P);
@@ -170,7 +214,7 @@ void train(CudaCSRMatrix* matrix, config::Config* cfg, float **P_ptr, float **Q_
 
     // Free memory
     cudaFree(errors_device);
-    cudaFree(losses_device);
+    cudaFree(block_errors_device);
     cudaFree(user_bias_device);
     cudaFree(item_bias_device);
     cudaFree(user_bias_target);
@@ -181,6 +225,7 @@ void train(CudaCSRMatrix* matrix, config::Config* cfg, float **P_ptr, float **Q_
     delete Q_device;
     delete Q_device_target;
     delete [] errors_host;
+    delete [] block_errors_host;
 }
 
 void train(CudaCSRMatrix* matrix, config::Config* cfg, float **P_ptr, float **Q_ptr, float **losses_ptr,

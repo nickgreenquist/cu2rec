@@ -37,24 +37,48 @@ __global__ void loss_kernel(int factors, int user_count, int item_count, const f
     }
 }
 
-__global__ void total_loss_kernel(float *errors, float *losses, int n_errors, int current_iter, float discount) {
-    int x = blockDim.x * blockIdx.x + threadIdx.x;
-    for(int i = n_errors / 2; i > 0; i >>= 1) {
-        __syncthreads();
-        if(x < i) {
-            if(i == n_errors / 2) {
-                // First iteration
-                // Need to square the errors
-                errors[x] = pow(errors[x], 2) + pow(errors[x + i], 2);
-            } else {
-                errors[x] += errors[x + i];
-            }
+// Inspired by https://developer.download.nvidia.com/assets/cuda/files/reduction.pdf
+// and https://devblogs.nvidia.com/using-shared-memory-cuda-cc/
+// Fixes the problems related to data sizes
+template <unsigned int block_size>
+__global__ void total_loss_kernel(float *in_errors, float *out_errors, int n_errors) {
+    extern __shared__ float sdata[];
+    unsigned int tid = threadIdx.x;
+    unsigned int i = blockIdx.x * block_size + tid;
+    unsigned int grid_size = block_size * gridDim.x;
+    sdata[tid] = 0;
+    while (i < n_errors) {
+        sdata[tid] += pow(in_errors[i], 2);
+        i += grid_size;
+    }
+    __syncthreads();
+    if (block_size >= 512) {
+        if (tid < 256) {
+            sdata[tid] += sdata[tid + 256];
         }
+        __syncthreads();
     }
-    if(x == 0) {
-        // Doing this atomic, in case we want to parallelize this calculation using streams
-        atomicAdd(&losses[current_iter], discount * errors[0]);
+    if (block_size >= 256) {
+        if (tid < 128) {
+            sdata[tid] += sdata[tid + 128];
+        }
+        __syncthreads();
     }
+    if (block_size >= 128) {
+        if (tid < 64) {
+            sdata[tid] += sdata[tid + 64];
+        }
+        __syncthreads();
+    }
+    if (tid < block_size / 2) {
+        if (block_size >= 64) sdata[tid] += sdata[tid + 32];
+        if (block_size >= 32) sdata[tid] += sdata[tid + 16];
+        if (block_size >= 16) sdata[tid] += sdata[tid + 8];
+        if (block_size >= 8) sdata[tid] += sdata[tid + 4];
+        if (block_size >= 4) sdata[tid] += sdata[tid + 2];
+        if (block_size >= 2) sdata[tid] += sdata[tid + 1];
+    }
+    if (tid == 0) out_errors[blockIdx.x] = sdata[0];
 }
 
 void calculate_loss_gpu(CudaDenseMatrix* P_d, CudaDenseMatrix* Q_d, int factors, int user_count, int item_count, int num_ratings, 
