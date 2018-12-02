@@ -155,6 +155,19 @@ cu2rec::CudaCSRMatrix* createSparseMatrix(std::vector<Rating> *ratings, int rows
     return matrix;
 }
 
+size_t getFreeBytes(const int where, size_t *total_bytes) {
+    size_t free_bytes;
+
+    cudaError_t err = cudaMemGetInfo(&free_bytes, total_bytes);
+    if (err != cudaSuccess)
+    {
+        cout << "getFreeBytes: call index " << where
+            << ": cudaMemGetInfo returned the error: " << cudaGetErrorString(err) << endl;
+        exit(1);
+    }
+    return free_bytes;
+}
+
 __device__ float get_prediction(int factors, const float *p, const float *q, float user_bias, float item_bias, float global_bias) {
         float pred = global_bias + user_bias + item_bias;
         for (int f = 0; f < factors; f++)

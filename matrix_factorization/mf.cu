@@ -23,6 +23,12 @@ int main(int argc, char **argv){
         }
     }
 
+    // Check free memory
+    size_t free_bytes, total_bytes;
+    free_bytes = getFreeBytes(0, &total_bytes);
+    long free_bytes_before = (long)free_bytes;
+    printf("Free memory: %ld\n\n", free_bytes_before);
+
     // Load in train data
     string file_path_train = argv[optind++];
     int rows, cols;

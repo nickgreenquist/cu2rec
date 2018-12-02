@@ -49,6 +49,9 @@ float* initialize_normal_array(int size, int n_factors, int seed);
 float *initialize_normal_array(int size, int n_factors);
 cu2rec::CudaCSRMatrix* createSparseMatrix(std::vector<Rating> *ratings, int rows, int cols);
 
+// GPU information helper functions
+size_t getFreeBytes(const int where, size_t *total_bytes);
+
 // device functions kernels can use
 __device__ float get_prediction(int factors, const float *p, const float *q, float user_bias, float item_bias, float global_bias);
 
