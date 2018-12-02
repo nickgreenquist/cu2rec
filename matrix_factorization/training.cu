@@ -45,7 +45,7 @@ float calculate_total_loss(float *in_errors, float *out_errors, float *out_error
             total_loss_kernel<  2><<<grid_size, block_size,   2 * sizeof(float)>>>(in_errors, out_errors, n_errors, error_type);
             break;
         case 1:
-            total_loss_kernel<  1><<<grid_size, block_size,   1 * sizeof(float)>>>(in_errors, out_errors, n_errors);
+            total_loss_kernel<  1><<<grid_size, block_size,   1 * sizeof(float)>>>(in_errors, out_errors, n_errors, error_type);
             break;
     }
     CHECK_CUDA(cudaGetLastError());
@@ -79,6 +79,7 @@ void train(CudaCSRMatrix* train_matrix, CudaCSRMatrix* test_matrix, config::Conf
     float *errors_device;
     CHECK_CUDA(cudaMalloc(&errors_device, train_matrix->nonzeros * sizeof(float)));
 
+    float *errors_test = new float[test_matrix->nonzeros];
     float *errors_test_device;
     CHECK_CUDA(cudaMalloc(&errors_test_device, test_matrix->nonzeros * sizeof(float)));
 
@@ -167,6 +168,18 @@ void train(CudaCSRMatrix* train_matrix, CudaCSRMatrix* test_matrix, config::Conf
             mae = calculate_total_loss(errors_test_device, block_errors_device, block_errors_host, test_matrix->nonzeros, dim_grid_loss.x, dim_block_loss.x, MAE);
             printf("TEST: Iteration %d GPU MAE %f RMSE %f\n", i + 1, mae, rmse);
 
+            // Calculate loss on Test data
+            cudaMemcpy(errors_test, errors_test_device, test_matrix->nonzeros * sizeof(float), cudaMemcpyDeviceToHost);
+            mae = 0.0;
+            rmse = 0.0;
+            for(int k = 0; k <  test_matrix->nonzeros; k++) {
+                mae += abs(errors_test[k]);
+                rmse += errors_test[k] * errors_test[k];
+            }
+            mae /= test_matrix->nonzeros;
+            rmse = sqrt(rmse / test_matrix->nonzeros);
+            printf("TEST: Iteration %d MAE: %f RMSE %f\n", i + 1, mae, rmse);
+
             end_loss = clock();
             time_taken_loss = ((double)(end_loss - start_loss))/ CLOCKS_PER_SEC;   
             printf("Time taken to calculate total loss is %lf\n\n", time_taken_loss);
@@ -234,6 +247,7 @@ void train(CudaCSRMatrix* train_matrix, CudaCSRMatrix* test_matrix, config::Conf
     delete P_device_target;
     delete Q_device;
     delete Q_device_target;
+    delete [] errors_test;
     delete [] block_errors_host;
 }
 

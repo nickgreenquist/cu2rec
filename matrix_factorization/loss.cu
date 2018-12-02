@@ -65,13 +65,33 @@ __global__ void total_loss_kernel(float *in_errors, float *out_errors, int n_err
         }
         __syncthreads();
     }
+    if (block_size >= 64) {
+        if (tid < 32) {
+            sdata[tid] += sdata[tid + 32];
+        }
+        __syncthreads();
+    }
     if (tid < block_size / 2) {
-        if (block_size >= 64) sdata[tid] += sdata[tid + 32];
-        if (block_size >= 32) sdata[tid] += sdata[tid + 16];
-        if (block_size >= 16) sdata[tid] += sdata[tid + 8];
-        if (block_size >= 8) sdata[tid] += sdata[tid + 4];
-        if (block_size >= 4) sdata[tid] += sdata[tid + 2];
-        if (block_size >= 2) sdata[tid] += sdata[tid + 1];
+        if (block_size >= 32) {
+            sdata[tid] += sdata[tid + 16];
+            __syncthreads();
+        }
+        if (block_size >= 16) {
+            sdata[tid] += sdata[tid + 8];
+            __syncthreads();
+        }
+        if (block_size >= 8) {
+            sdata[tid] += sdata[tid + 4];
+            __syncthreads();
+        }
+        if (block_size >= 4) {
+            sdata[tid] += sdata[tid + 2];
+            __syncthreads();
+        }
+        if (block_size >= 2) {
+            sdata[tid] += sdata[tid + 1];
+            __syncthreads();
+        }
     }
     if (tid == 0) out_errors[blockIdx.x] = sdata[0];
 }
