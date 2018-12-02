@@ -22,19 +22,6 @@ __global__ void sgd_update(int *indptr, int *indices, const float *data,float *P
                            float *item_bias_target, curandState *my_curandstate,
                             float global_bias) {
 
-    extern __shared__ float s_memory[];
-    float* s_user_bias = (float*)s_memory;
-
-    // TODO: Only load in user_bias values that this block's threads will hit
-    // use first warp to load in user_biases
-    if(threadIdx.x < warp_size) {
-        for(int i = threadIdx.x; i < n_rows; i += warp_size) {
-            s_user_bias[i] = user_bias[i];
-        }
-    }
-    // sync all threads before accessing any shared memory
-    __syncthreads();
-
     // One thread per user
     int x = blockDim.x * blockIdx.x + threadIdx.x;
     if(x < n_rows) {
@@ -47,7 +34,7 @@ __global__ void sgd_update(int *indptr, int *indices, const float *data,float *P
 
         // get the error random item y_i
         int item_id = indices[y_i];
-        float error_y_i = data[y_i] - get_prediction(config::n_factors, &P[x * config::n_factors], &Q[item_id * config::n_factors], s_user_bias[x], item_bias[item_id], global_bias);
+        float error_y_i = data[y_i] - get_prediction(config::n_factors, &P[x * config::n_factors], &Q[item_id * config::n_factors], user_bias[x], item_bias[item_id], global_bias);
 
         int y = indices[y_i];
         for(int f = 0; f < config::n_factors; ++f) {

@@ -139,14 +139,12 @@ void train(CudaCSRMatrix* train_matrix, CudaCSRMatrix* test_matrix, config::Conf
         CHECK_CUDA(cudaGetLastError());
 
         // Run single iteration of SGD
-        float shared_mem_size = dim_block.x * sizeof(float);
-        sgd_update<<<dim_grid_sgd, dim_block, shared_mem_size>>>(train_matrix->indptr, train_matrix->indices, train_matrix->data, P_device->data, Q_device->data,
+        sgd_update<<<dim_grid_sgd, dim_block>>>(train_matrix->indptr, train_matrix->indices, train_matrix->data, P_device->data, Q_device->data,
                                                 Q_device_target->data, errors_device,
                                                 user_count, item_count, user_bias_device, item_bias_device,
                                                 item_bias_target, d_state,
                                                 global_bias);
         CHECK_CUDA(cudaGetLastError());
-
         // Calculate total loss periodically to check for improving loss
         if((i + 1) % cfg->total_iterations == 0 || i == 0) {
         // if((i + 1) % 10 == 0 || i == 0) {
@@ -207,7 +205,7 @@ void train(CudaCSRMatrix* train_matrix, CudaCSRMatrix* test_matrix, config::Conf
 
         cfg->cur_iterations += 1;
     }
-    cudaDeviceSynchronize();
+    CHECK_CUDA(cudaDeviceSynchronize());
     end = clock();
 
     // Output time taken
