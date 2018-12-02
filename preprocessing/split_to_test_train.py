@@ -1,7 +1,8 @@
+import argparse
 import csv
-import random
 import os
-import sys
+import random
+
 
 def split_per_user(rows, train_percent):
     # create a map for each user to a list of the ratings of that user
@@ -27,7 +28,8 @@ def split_per_user(rows, train_percent):
         for rating in user_test:
             test.append(rating)
 
-    return train,test
+    return train, test
+
 
 def split_true(rows, train_percent):
     random.shuffle(rows)
@@ -39,7 +41,8 @@ def split_true(rows, train_percent):
     train = sorted(train, key= lambda x: x[0])
     test = sorted(test, key= lambda x: x[0])
 
-    return train,test
+    return train, test
+
 
 def write_ratings(filename, ratings):
     with open(filename, "w", newline='') as file:
@@ -49,6 +52,7 @@ def write_ratings(filename, ratings):
             line = ",".join(row)
             file.write(line)
             file.write('\n')
+
 
 def read_ratings(filename):
     rows = []
@@ -67,20 +71,17 @@ def read_ratings(filename):
             row_num += 1
     return rows
 
+
 if __name__ == "__main__":
-    if len(sys.argv) < 2:
-        sys.exit('ERROR: Please provide a ratings file to split into train/test')
-    if len(sys.argv) < 3:
-        sys.exit('ERROR: Please provide percentage of ratings for training set')
-    filename = sys.argv[1]
-    percent_train = float(sys.argv[2])
+    parser = argparse.ArgumentParser(description="Splits a csv file into training and test sets")
+    parser.add_argument('file_ratings', type=str, help='the path to the ratings file to split')
+    parser.add_argument('test_ratio', type=float, help='the ratio of test examples')
+    args = parser.parse_args()
 
-    rows = read_ratings(filename)
+    rows = read_ratings(args.file_ratings)
+    train, test = split_per_user(rows, 1 - parser.test_ratio)
 
-    train, test = split_true(rows, .8)
+    filepath, extension = os.path.splitext(args.file_ratings)
 
-    filepath = os.path.splitext(filename)[0]
-    extension = os.path.splitext(filename)[1]
-
-    write_ratings("{}_train.{}".format(filepath, extension), train)
-    write_ratings("{}_test.{}".format(filepath, extension), test)
+    write_ratings("{}_train{}".format(filepath, extension), train)
+    write_ratings("{}_test{}".format(filepath, extension), test)
