@@ -8,19 +8,19 @@
 /* To index element (i,j) of a 2D array stored as 1D */
 #define index(i, j, N)  ((i)*(N)) + (j)
 
-string test_dir = "../../data/test";
-string test_gen_dir = "../../data/test/gen";
-string test_filename = "test_ratings.csv";
-string test_array_filename = "test_Q.csv";
+std::string test_dir = "../../data/test";
+std::string test_gen_dir = "../../data/test/gen";
+std::string test_filename = "test_ratings.csv";
+std::string test_array_filename = "test_Q.csv";
 
-vector<Rating> test_read_csv() {
+std::vector<Rating> test_read_csv() {
     int rows, cols;
     float global_bias;
-    string filename;
+    std::string filename;
     filename.append(test_dir);
     filename.append("/");
     filename.append(test_filename);
-    vector<Rating> ratings = readCSV(filename, &rows, &cols, &global_bias);
+    std::vector<Rating> ratings = readCSV(filename, &rows, &cols, &global_bias);
     assert(rows == 6);
     assert(cols == 5);
     assert(ratings.size() == 18);
@@ -30,7 +30,7 @@ vector<Rating> test_read_csv() {
 }
 
 void test_read_array() {
-    string filename;
+    std::string filename;
     filename.append(test_dir);
     filename.append("/");
     filename.append(test_array_filename);
@@ -71,7 +71,7 @@ void test_output() {
 
     // Get filepath without extension
     size_t lastindex = test_filename.find_last_of("."); 
-    string filename = test_filename.substr(0, lastindex); 
+    std::string filename = test_filename.substr(0, lastindex); 
 
     // Write components to file
     writeToFile(test_gen_dir, filename, "csv", "p", P, user_count, factors, factors);
@@ -91,11 +91,11 @@ void test_sparse_matrix() {
     // Reread CSV so this test is self contained
     int rows, cols;
     float global_bias;
-    string filename;
+    std::string filename;
     filename.append(test_dir);
     filename.append("/");
     filename.append(test_filename);
-    vector<Rating> ratings = readCSV(filename, &rows, &cols, &global_bias);
+    std::vector<Rating> ratings = readCSV(filename, &rows, &cols, &global_bias);
 
     // Create Sparse Matrix in Device memory
     cu2rec::CudaCSRMatrix* matrix = createSparseMatrix(&ratings, rows, cols);
@@ -112,9 +112,9 @@ void test_sparse_matrix() {
     cudaMemcpy(indices, matrix->indices,  nonzeros * sizeof(int), cudaMemcpyDeviceToHost);
     cudaMemcpy(data, matrix->data, nonzeros * sizeof(float), cudaMemcpyDeviceToHost);
 
-    vector<int> expected_indptr = {0,4,7,10,13,16,18};
-    vector<int> expected_indices = {0,1,2,4,0,1,2,0,1,2,0,1,2,1,3,4,3,4};
-    vector<float> expected_data = {1,1,1,5,3,3,3,4,4,4,5,5,5,2,4,4,5,5};
+    std::vector<int> expected_indptr = {0,4,7,10,13,16,18};
+    std::vector<int> expected_indices = {0,1,2,4,0,1,2,0,1,2,0,1,2,1,3,4,3,4};
+    std::vector<float> expected_data = {1,1,1,5,3,3,3,4,4,4,5,5,5,2,4,4,5,5};
 
     for(int i = 0; i < expected_indptr.size(); i++) {
         assert(expected_indptr.at(i) == indptr[i]);
@@ -134,21 +134,21 @@ void test_sparse_matrix() {
 }
 
 int main() {
-    cout << "Testing CSV is read in correctly...";
+    std::cout << "Testing CSV is read in correctly...";
     test_read_csv();
-    cout << "PASSED\n";
+    std::cout << "PASSED\n";
 
-    cout << "Testing reading components from files...";
+    std::cout << "Testing reading components from files...";
     test_read_array();
-    cout << "PASSED\n";
+    std::cout << "PASSED\n";
 
-    cout << "Testing Sparse Matrix is Created correctly...";
+    std::cout << "Testing Sparse Matrix is Created correctly...";
     test_sparse_matrix();
-    cout << "PASSED\n";
+    std::cout << "PASSED\n";
 
-    cout << "Testing writing components to files...";
+    std::cout << "Testing writing components to files...";
     test_output();
-    cout << "PASSED\n";
+    std::cout << "PASSED\n";
 
     return 0;
 }
