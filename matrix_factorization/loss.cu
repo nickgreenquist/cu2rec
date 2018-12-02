@@ -17,15 +17,13 @@ using namespace cu2rec;
 // PARALLEL
 __global__ void loss_kernel(int factors, int user_count, int item_count, const float * P, const float * Q, const int * indptr, 
                             const int * indices, const float * data, float * error, float * user_bias, float * item_bias, float global_bias) {
-    extern __shared__ float s_user_bias[];
     
     // One thread per user
     int u = blockDim.x * blockIdx.x + threadIdx.x;
-    s_user_bias[threadIdx.x] = user_bias[u];
     if(u < user_count) {
         // get this user's factors into closer memory
         const float * p = &P[u * factors];
-        const float ub = s_user_bias[threadIdx.x]; // user_bias[u];
+        const float ub = user_bias[u];
 
         for (int i = indptr[u]; i < indptr[u + 1]; ++i) {
             int item_id = indices[i];
@@ -83,8 +81,7 @@ void calculate_loss_gpu(CudaDenseMatrix* P_d, CudaDenseMatrix* Q_d, int factors,
     int n_threads = 32;
     dim3 dimBlock(n_threads);
     dim3 dimGrid(user_count / n_threads + 1);
-    float shared_mem_size = dimBlock.x * sizeof(float);
-    loss_kernel<<<dimGrid, dimBlock, shared_mem_size>>>(
+    loss_kernel<<<dimGrid, dimBlock>>>(
         factors, user_count, item_count, P_d->data, Q_d->data,
         matrix->indptr, matrix->indices, matrix->data, error_d,
         user_bias, item_bias, global_bias);
