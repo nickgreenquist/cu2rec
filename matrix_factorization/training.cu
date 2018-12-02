@@ -11,7 +11,6 @@
 #define index(i, j, N)  ((i)*(N)) + (j)
 
 using namespace cu2rec;
-using namespace std;
 
 // Inspired by https://developer.download.nvidia.com/assets/cuda/files/reduction.pdf
 // and https://devblogs.nvidia.com/using-shared-memory-cuda-cc/
@@ -49,7 +48,8 @@ float calculate_total_loss(float *in_errors, float *out_errors, float *out_error
             total_loss_kernel<  1><<<grid_size, block_size,   1 * sizeof(float)>>>(in_errors, out_errors, n_errors);
             break;
     }
-    cudaMemcpy(out_errors_host, out_errors, grid_size * sizeof(float), cudaMemcpyDeviceToHost);
+    CHECK_CUDA(cudaGetLastError());
+    CHECK_CUDA(cudaMemcpy(out_errors_host, out_errors, grid_size * sizeof(float), cudaMemcpyDeviceToHost));
     float total = 0;
     for(int k = 0; k < grid_size; k++) {
         total += out_errors_host[k];
@@ -76,32 +76,30 @@ void train(CudaCSRMatrix* train_matrix, CudaCSRMatrix* test_matrix, config::Conf
     CudaDenseMatrix* Q_device_target = new CudaDenseMatrix(item_count, cfg->n_factors, Q);
 
     // Create the errors
-    float *errors_host = new float[train_matrix->nonzeros];
     float *errors_device;
-    cudaMalloc(&errors_device, train_matrix->nonzeros * sizeof(float));
+    CHECK_CUDA(cudaMalloc(&errors_device, train_matrix->nonzeros * sizeof(float)));
 
-    float *errors_test = new float[test_matrix->nonzeros];
     float *errors_test_device;
-    cudaMalloc(&errors_test_device, test_matrix->nonzeros * sizeof(float));
+    CHECK_CUDA(cudaMalloc(&errors_test_device, test_matrix->nonzeros * sizeof(float)));
 
     // Create the bias array
     float *user_bias = initialize_normal_array(user_count, cfg->n_factors);
     *user_bias_ptr = user_bias;
     
     float *user_bias_device;
-    cudaMalloc(&user_bias_device, user_count * sizeof(float));
-    cudaMemcpy(user_bias_device, user_bias, user_count * sizeof(float), cudaMemcpyHostToDevice);
+    CHECK_CUDA(cudaMalloc(&user_bias_device, user_count * sizeof(float)));
+    CHECK_CUDA(cudaMemcpy(user_bias_device, user_bias, user_count * sizeof(float), cudaMemcpyHostToDevice));
 
     float *item_bias_device;
-    cudaMalloc(&item_bias_device, item_count * sizeof(float));
-    cudaMemcpy(item_bias_device, item_bias, item_count * sizeof(float), cudaMemcpyHostToDevice);
+    CHECK_CUDA(cudaMalloc(&item_bias_device, item_count * sizeof(float)));
+    CHECK_CUDA(cudaMemcpy(item_bias_device, item_bias, item_count * sizeof(float), cudaMemcpyHostToDevice));
 
     // Create bias targets
     float *user_bias_target, *item_bias_target;
-    cudaMalloc(&user_bias_target, user_count * sizeof(float));
-    cudaMemcpy(user_bias_target, user_bias, user_count * sizeof(float), cudaMemcpyHostToDevice);
-    cudaMalloc(&item_bias_target, item_count * sizeof(float));
-    cudaMemcpy(item_bias_target, item_bias, item_count * sizeof(float), cudaMemcpyHostToDevice);
+    CHECK_CUDA(cudaMalloc(&user_bias_target, user_count * sizeof(float)));
+    CHECK_CUDA(cudaMemcpy(user_bias_target, user_bias, user_count * sizeof(float), cudaMemcpyHostToDevice));
+    CHECK_CUDA(cudaMalloc(&item_bias_target, item_count * sizeof(float)));
+    CHECK_CUDA(cudaMemcpy(item_bias_target, item_bias, item_count * sizeof(float), cudaMemcpyHostToDevice));
 
     // Dimensions
     int n_threads = 32;
@@ -117,12 +115,12 @@ void train(CudaCSRMatrix* train_matrix, CudaCSRMatrix* test_matrix, config::Conf
     // Create loss per block
     float *block_errors_host = new float[dim_grid_loss.x];
     float *block_errors_device;
-    cudaMalloc(&block_errors_device, dim_grid_loss.x * sizeof(float));
-    cudaMemset(block_errors_device, 0, dim_grid_loss.x * sizeof(float));
+    CHECK_CUDA(cudaMalloc(&block_errors_device, dim_grid_loss.x * sizeof(float)));
+    CHECK_CUDA(cudaMemset(block_errors_device, 0, dim_grid_loss.x * sizeof(float)));
 
     // Create curand state
     curandState *d_state;
-    cudaMalloc(&d_state, user_count * sizeof(curandState));
+    CHECK_CUDA(cudaMalloc(&d_state, user_count * sizeof(curandState)));
 
     // to measure time taken by a specific part of the code 
     double time_taken;
@@ -132,28 +130,26 @@ void train(CudaCSRMatrix* train_matrix, CudaCSRMatrix* test_matrix, config::Conf
     clock_t start_loss, end_loss;
 
     // Training loop
-    cudaError_t lastError;
     start = clock();
     for (int i = 0; i < cfg->total_iterations; ++i) {
 
         // Set up random state using iteration as seed
         initCurand<<<dim_grid_sgd, dim_block>>>(d_state, i + 1, user_count);
 
+        CHECK_CUDA(cudaGetLastError());
+
         // Run single iteration of SGD
-        float shared_mem_size = user_count * sizeof(float);
+        float shared_mem_size = dim_block.x * sizeof(float);
         sgd_update<<<dim_grid_sgd, dim_block, shared_mem_size>>>(train_matrix->indptr, train_matrix->indices, train_matrix->data, P_device->data, Q_device->data,
                                                 Q_device_target->data, errors_device,
                                                 user_count, item_count, user_bias_device, item_bias_device,
                                                 item_bias_target, d_state,
                                                 global_bias);
-        lastError = cudaGetLastError();
-        if(cudaSuccess != lastError) {
-            printf("ERROR: %s\n", cudaGetErrorName(lastError));
-        }
+        CHECK_CUDA(cudaGetLastError());
 
         // Calculate total loss periodically to check for improving loss
-        // if((i + 1) % cfg->total_iterations == 0 || i == 0) {
-        if((i + 1) % 10 == 0 || i == 0) {
+        if((i + 1) % cfg->total_iterations == 0 || i == 0) {
+        // if((i + 1) % 10 == 0 || i == 0) {
             start_loss = clock();
 
             // Calculate initial error per each rating
@@ -186,10 +182,7 @@ void train(CudaCSRMatrix* train_matrix, CudaCSRMatrix* test_matrix, config::Conf
         // if(cfg->item_bias_reg > 0)
         //     total_loss_kernel<<<dim_grid_item_bias_reg_loss, dim_block>>>(item_bias_device, losses_device, item_count, i, cfg->item_bias_reg);
 
-        lastError = cudaGetLastError();
-        if(cudaSuccess != lastError) {
-            printf("ERROR: %s\n", cudaGetErrorName(lastError));
-        }
+        CHECK_CUDA(cudaGetLastError());
 
         // // The loss kernels modify P, Q, user_bias, and item_bias
         // // Copy them back
@@ -227,24 +220,22 @@ void train(CudaCSRMatrix* train_matrix, CudaCSRMatrix* test_matrix, config::Conf
     Q_device->to_host(Q);
 
     // Copy updated bias arrays back
-    cudaMemcpy(user_bias, user_bias_device, user_count * sizeof(float), cudaMemcpyDeviceToHost);
-    cudaMemcpy(item_bias, item_bias_device, item_count * sizeof(float), cudaMemcpyDeviceToHost);
+    CHECK_CUDA(cudaMemcpy(user_bias, user_bias_device, user_count * sizeof(float), cudaMemcpyDeviceToHost));
+    CHECK_CUDA(cudaMemcpy(item_bias, item_bias_device, item_count * sizeof(float), cudaMemcpyDeviceToHost));
 
     // Free memory
-    cudaFree(errors_device);
-    cudaFree(errors_test_device);
-    cudaFree(block_errors_device);
-    cudaFree(user_bias_device);
-    cudaFree(item_bias_device);
-    cudaFree(user_bias_target);
-    cudaFree(item_bias_target);
-    cudaFree(d_state);
+    CHECK_CUDA(cudaFree(errors_device));
+    CHECK_CUDA(cudaFree(errors_test_device));
+    CHECK_CUDA(cudaFree(block_errors_device));
+    CHECK_CUDA(cudaFree(user_bias_device));
+    CHECK_CUDA(cudaFree(item_bias_device));
+    CHECK_CUDA(cudaFree(user_bias_target));
+    CHECK_CUDA(cudaFree(item_bias_target));
+    CHECK_CUDA(cudaFree(d_state));
     delete P_device;
     delete P_device_target;
     delete Q_device;
     delete Q_device_target;
-    delete [] errors_host;
-    delete [] errors_test;
     delete [] block_errors_host;
 }
 

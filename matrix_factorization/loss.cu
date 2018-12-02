@@ -7,6 +7,7 @@
 #include "cublas_v2.h"
 
 #include "matrix.h"
+#include "util.h"
 
 #define index(i, j, N)  ((i)*(N)) + (j)
 #define warp_size 32 //TODO: we need to get device props
@@ -16,27 +17,15 @@ using namespace cu2rec;
 // PARALLEL
 __global__ void loss_kernel(int factors, int user_count, int item_count, const float * P, const float * Q, const int * indptr, 
                             const int * indices, const float * data, float * error, float * user_bias, float * item_bias, float global_bias) {
-
-    
-    extern __shared__ float s_memory[];
-    float* s_user_bias = (float*)s_memory;
-
-    // TODO: Only load in user_bias values that this block's threads will hit
-    // use first warp to load in user_biases
-    if(threadIdx.x < warp_size) {
-        for(int i = threadIdx.x; i < user_count; i += warp_size) {
-            s_user_bias[i] = user_bias[i];
-        }
-    }
-    // sync all threads before accessing any shared memory
-    __syncthreads();
+    extern __shared__ float s_user_bias[];
     
     // One thread per user
     int u = blockDim.x * blockIdx.x + threadIdx.x;
+    s_user_bias[threadIdx.x] = user_bias[u];
     if(u < user_count) {
         // get this user's factors into closer memory
         const float * p = &P[u * factors];
-        const float ub = s_user_bias[u];
+        const float ub = s_user_bias[threadIdx.x]; // user_bias[u];
 
         for (int i = indptr[u]; i < indptr[u + 1]; ++i) {
             int item_id = indices[i];
@@ -94,13 +83,10 @@ void calculate_loss_gpu(CudaDenseMatrix* P_d, CudaDenseMatrix* Q_d, int factors,
     int n_threads = 32;
     dim3 dimBlock(n_threads);
     dim3 dimGrid(user_count / n_threads + 1);
-    float shared_mem_size = user_count * sizeof(float);
+    float shared_mem_size = dimBlock.x * sizeof(float);
     loss_kernel<<<dimGrid, dimBlock, shared_mem_size>>>(
         factors, user_count, item_count, P_d->data, Q_d->data,
         matrix->indptr, matrix->indices, matrix->data, error_d,
         user_bias, item_bias, global_bias);
-    cudaError_t lastError = cudaGetLastError();
-    if(cudaSuccess != lastError) {
-        printf("ERROR: %s\n", cudaGetErrorName(lastError));
-    }
+    CHECK_CUDA(cudaGetLastError());
 }
