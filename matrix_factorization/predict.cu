@@ -109,7 +109,7 @@ int main(int argc, char **argv) {
     CudaCSRMatrix* matrix = createSparseMatrix(&ratings, 1, n_items);
 
     float *P, *losses, *user_bias;
-    train(matrix, cfg, &P, &Q, Q, &losses, &user_bias, &item_bias, item_bias, global_bias);
+    train(matrix, matrix, cfg, &P, &Q, Q, &losses, &user_bias, &item_bias, item_bias, global_bias);
 
     float *predictions = predict_ratings(P, Q, user_bias[0], item_bias, global_bias, n_items, cfg->n_factors);
     print_predictions(predictions, n_items);

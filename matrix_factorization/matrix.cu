@@ -6,15 +6,7 @@
 #include "cublas_v2.h"
 
 #include "matrix.h"
-
-#define CHECK_CUDA(code) { checkCuda((code), __FILE__, __LINE__); }
-inline void checkCuda(cudaError_t code, const char *file, int line) {
-    if (code != cudaSuccess) {
-        std::stringstream err;
-        err << "Cuda Error: " << cudaGetErrorString(code) << " (" << file << ":" << line << ")";
-        throw std::runtime_error(err.str());
-    }
-}
+#include "util.h"
 
 namespace cu2rec {
     CudaDenseMatrix::CudaDenseMatrix(int rows, int cols, const float * host_data)

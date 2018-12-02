@@ -6,12 +6,10 @@
 #include <algorithm>
 #include <vector>
 #include <string>
-
+#include <sstream>
 #include <cuda.h>
 
 #include "matrix.h"
-
-using namespace std;
 
 /* To index element (i,j) of a 2D array stored as 1D */
 #define index(i, j, N)  ((i)*(N)) + (j)
@@ -23,12 +21,22 @@ struct Rating
     float rating;
 };
 
+// Error checking
+#define CHECK_CUDA(code) { checkCuda((code), __FILE__, __LINE__); }
+inline void checkCuda(cudaError_t code, const char *file, int line) {
+    if (code != cudaSuccess) {
+        std::stringstream err;
+        err << "Cuda Error: " << cudaGetErrorString(code) << " (" << file << ":" << line << ")";
+        throw std::runtime_error(err.str());
+    }
+}
+
 // File read and write utils
 float* read_array(const char *file_path, int *n_rows_ptr, int *n_cols_ptr);
 float* read_array(const char *file_path);
 std::vector<Rating> readCSV(std::string filename, int *rows, int *cols, float *global_bias);
 void writeCSV(char *file_path, float *data, int rows, int cols);
-void writeToFile(string parent_dir, string base_filename, string extension, string component, float *data, int rows, int cols, int factors);
+void writeToFile(std::string parent_dir, std::string base_filename, std::string extension, std::string component, float *data, int rows, int cols, int factors);
 
 // Print utils
 void printRating(Rating r);
