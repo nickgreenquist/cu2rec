@@ -81,11 +81,8 @@ void train(CudaCSRMatrix* train_matrix, CudaCSRMatrix* test_matrix, config::Conf
     CHECK_CUDA(cudaMalloc(&d_state, user_count * sizeof(curandState)));
 
     // to measure time taken by a specific part of the code 
-    double time_taken;
-    clock_t start, end;
-
-    double time_taken_loss;
-    clock_t start_loss, end_loss;
+    double time_taken, time_taken_loss;
+    clock_t start, end, start_loss, end_loss;
 
     // Training loop
     start = clock();
@@ -93,22 +90,20 @@ void train(CudaCSRMatrix* train_matrix, CudaCSRMatrix* test_matrix, config::Conf
 
         // Set up random state using iteration as seed
         initCurand<<<dim_grid_sgd, dim_block>>>(d_state, i + 1, user_count);
-
         CHECK_CUDA(cudaGetLastError());
 
         // Run single iteration of SGD
-        sgd_update<<<dim_grid_sgd, dim_block>>>(train_matrix->indptr, train_matrix->indices, train_matrix->data, P_device->data, Q_device->data,
-                                                Q_device_target->data, errors_device,
-                                                user_count, item_count, user_bias_device, item_bias_device,
-                                                item_bias_target, d_state,
+        sgd_update<<<dim_grid_sgd, dim_block>>>(train_matrix->indptr, train_matrix->indices, train_matrix->data, P_device->data, Q_device->data, 
+                                                Q_device_target->data, user_count, user_bias_device, item_bias_device, item_bias_target, d_state,
                                                 global_bias);
         CHECK_CUDA(cudaGetLastError());
+
         // Calculate total loss periodically to check for improving loss
         // if((i + 1) % cfg->total_iterations == 0 || i == 0) {
-        if((i + 1) % 10 == 0 || i == 0) {
+        if((i + 1) % 100 == 0 || i == 0) {
             start_loss = clock();
 
-            // Calculate initial error per each rating
+            // Calculate error on train ratings
             calculate_loss_gpu(P_device, Q_device, cfg->n_factors, user_count, item_count, train_matrix->nonzeros, train_matrix,
                                errors_device, user_bias_device, item_bias_device, global_bias);
 
@@ -160,7 +155,6 @@ void train(CudaCSRMatrix* train_matrix, CudaCSRMatrix* test_matrix, config::Conf
     // Output time taken
     time_taken = ((double)(end - start))/ CLOCKS_PER_SEC;   
     printf("Time taken for %d of iterations is %lf\n", cfg->total_iterations, time_taken);
-    
 
     // Copy updated P and Q back
     P_device->to_host(P);

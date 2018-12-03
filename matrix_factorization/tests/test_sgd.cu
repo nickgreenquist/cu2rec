@@ -102,7 +102,7 @@ void test_sgd() {
     // Call SGD kernel
     float shared_mem_size = rows * sizeof(float);
     sgd_update<<<dimGrid, dimBlock, shared_mem_size>>>(matrix->indptr, matrix->indices, matrix->data, P_device, Q_device, Q_device_target,
-                                      errors_device, rows, cols, user_bias_device, item_bias_device,
+                                      rows, user_bias_device, item_bias_device,
                                       item_bias_target, d_state,
                                       global_bias);
     std::swap(Q_device, Q_device_target);

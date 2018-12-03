@@ -17,10 +17,10 @@ __global__ void initCurand(curandState *state, unsigned long seed, int n_rows){
     }
 }
 
-__global__ void sgd_update(int *indptr, int *indices, const float *data,float *P, float *Q, float *Q_target, 
-                           float *errors, int n_rows, int n_cols, float *user_bias, float *item_bias,
+__global__ void sgd_update(int *indptr, int *indices, const float *data, float *P, float *Q, float *Q_target, 
+                           int n_rows, float *user_bias, float *item_bias,
                            float *item_bias_target, curandState *my_curandstate,
-                            float global_bias) {
+                           float global_bias) {
 
     // One thread per user
     int x = blockDim.x * blockIdx.x + threadIdx.x;
@@ -32,11 +32,14 @@ __global__ void sgd_update(int *indptr, int *indices, const float *data,float *P
         float myrandf = curand_uniform(&my_curandstate[x]); // random between (0, 1]
         int y_i = (int) ceil(myrandf * (high - low)) - 1 + low;
 
-        // get the error random item y_i
-        int item_id = indices[y_i];
-        float error_y_i = data[y_i] - get_prediction(config::n_factors, &P[x * config::n_factors], &Q[item_id * config::n_factors], user_bias[x], item_bias[item_id], global_bias);
-
+        // move some reused values to registers
         int y = indices[y_i];
+        float ub = user_bias[x];
+        float ib = item_bias[y];
+
+        // get the error random item y_i
+        float error_y_i = data[y_i] - get_prediction(config::n_factors, &P[x * config::n_factors], &Q[y * config::n_factors], ub, ib, global_bias);
+
         for(int f = 0; f < config::n_factors; ++f) {
             int p_index = index(x, f, config::n_factors);
             int q_index = index(y, f, config::n_factors);
@@ -51,11 +54,11 @@ __global__ void sgd_update(int *indptr, int *indices, const float *data,float *P
         }
 
         // update biases
-        user_bias[x] += config::learning_rate * (error_y_i - config::user_bias_reg * user_bias[x]);
+        user_bias[x] += config::learning_rate * (error_y_i - config::user_bias_reg * ub);
 
         // Only update item_bias if train flag is true
         if(config::is_train) {
-            item_bias_target[y] = item_bias[y] + config::learning_rate * (error_y_i - config::item_bias_reg * item_bias[y]);
+            item_bias_target[y] = ib + config::learning_rate * (error_y_i - config::item_bias_reg * ib);
         }
     }
 }

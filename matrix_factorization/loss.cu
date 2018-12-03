@@ -84,7 +84,9 @@ __global__ void total_loss_kernel(float *in_errors, float *out_errors, int n_err
         }
         __syncthreads();
     }
-    if (tid < block_size / 2) {
+    // if block_size is 1, compiler will complain about unneeded unsigned
+    // int comparison (tid) to a value of 0
+    if (!(block_size == 1) && tid < block_size / 2) {
         if (block_size >= 32) {
             sdata[tid] += sdata[tid + 16];
             __syncthreads();
