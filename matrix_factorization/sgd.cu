@@ -20,10 +20,10 @@ __global__ void initCurand(curandState *state, unsigned long seed, int n_rows){
 __global__ void sgd_update(int *indptr, int *indices, const float *data, float *P, float *Q, float *Q_target, 
                            int n_rows, float *user_bias, float *item_bias,
                            float *item_bias_target, curandState *my_curandstate,
-                           float global_bias) {
+                           float global_bias, int start_user) {
 
     // One thread per user
-    int x = blockDim.x * blockIdx.x + threadIdx.x;
+    int x = blockDim.x * blockIdx.x + threadIdx.x + start_user;
     if(x < n_rows) {
 
         // pick a random item y_i

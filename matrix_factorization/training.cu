@@ -60,6 +60,10 @@ void train(CudaCSRMatrix* train_matrix, CudaCSRMatrix* test_matrix, config::Conf
     CHECK_CUDA(cudaMemcpy(item_bias_target, item_bias, item_count * sizeof(float), cudaMemcpyHostToDevice));
 
     // Dimensions
+    int minibatch_size = 1<<14;
+    if(minibatch_size > user_count) {
+        minibatch_size = user_count + 32;
+    }
     int n_threads = 32;
     dim3 dim_block(n_threads);
     dim3 dim_grid_sgd(user_count / n_threads + 1);
@@ -87,14 +91,17 @@ void train(CudaCSRMatrix* train_matrix, CudaCSRMatrix* test_matrix, config::Conf
     double time_taken, time_taken_loss;
     clock_t start, end, start_loss, end_loss;
 
+    int start_user = 0;
     // Training loop
     start = clock();
     for (int i = 0; i < cfg->total_iterations; ++i) {
 
         // Run single iteration of SGD
-        sgd_update<<<dim_grid_sgd, dim_block>>>(train_matrix->indptr, train_matrix->indices, train_matrix->data, P_device->data, Q_device->data, 
+        sgd_update<<<minibatch_size/dim_block.x, dim_block>>>(train_matrix->indptr, train_matrix->indices, train_matrix->data, P_device->data, Q_device->data, 
                                                 Q_device_target->data, user_count, user_bias_device, item_bias_device, item_bias_target, d_state,
-                                                global_bias);
+                                                global_bias, start_user);
+
+        start_user = (minibatch_size == user_count + 32) ? 0 : (start_user + minibatch_size) % user_count;
         CHECK_CUDA(cudaGetLastError());
 
         // Calculate total loss periodically to check for improving loss
