@@ -79,6 +79,9 @@ void train(CudaCSRMatrix* train_matrix, CudaCSRMatrix* test_matrix, config::Conf
     // Create curand state
     curandState *d_state;
     CHECK_CUDA(cudaMalloc(&d_state, user_count * sizeof(curandState)));
+    // Set up random state using iteration as seed
+    initCurand<<<dim_grid_sgd, dim_block>>>(d_state, cfg->seed, user_count);
+    CHECK_CUDA(cudaGetLastError());
 
     // to measure time taken by a specific part of the code 
     double time_taken, time_taken_loss;
@@ -87,10 +90,6 @@ void train(CudaCSRMatrix* train_matrix, CudaCSRMatrix* test_matrix, config::Conf
     // Training loop
     start = clock();
     for (int i = 0; i < cfg->total_iterations; ++i) {
-
-        // Set up random state using iteration as seed
-        initCurand<<<dim_grid_sgd, dim_block>>>(d_state, i + 1, user_count);
-        CHECK_CUDA(cudaGetLastError());
 
         // Run single iteration of SGD
         sgd_update<<<dim_grid_sgd, dim_block>>>(train_matrix->indptr, train_matrix->indices, train_matrix->data, P_device->data, Q_device->data, 
