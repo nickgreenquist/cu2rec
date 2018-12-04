@@ -11,6 +11,7 @@
 std::string test_dir = "../../data/test";
 std::string test_gen_dir = "../../data/test/gen";
 std::string test_filename = "test_ratings.csv";
+std::string test_missing_user_ratings = "test_missing_user_ratings.csv";
 std::string test_array_filename = "test_Q.csv";
 
 std::vector<Rating> test_read_csv() {
@@ -133,6 +134,51 @@ void test_sparse_matrix() {
     delete matrix;
 }
 
+void test_missing_users() {
+    int rows, cols;
+    float global_bias;
+    std::string filename;
+    filename.append(test_dir);
+    filename.append("/");
+    filename.append(test_missing_user_ratings);
+    std::vector<Rating> ratings = readCSV(filename, &rows, &cols, &global_bias);
+
+    // Create Sparse Matrix in Device memory
+    cu2rec::CudaCSRMatrix* matrix = createSparseMatrix(&ratings, rows, cols);
+
+    // copy matrix from Device to Host
+    int nonzeros =  (int)(ratings.size());
+    int * indptr, * indices;
+    float * data;
+    indptr = new int[(rows + 1)];
+    indices = new int[nonzeros];
+    data = new float[nonzeros];
+
+    cudaMemcpy(indptr, matrix->indptr, (rows + 1) * sizeof(int), cudaMemcpyDeviceToHost);
+    cudaMemcpy(indices, matrix->indices,  nonzeros * sizeof(int), cudaMemcpyDeviceToHost);
+    cudaMemcpy(data, matrix->data, nonzeros * sizeof(float), cudaMemcpyDeviceToHost);
+
+    std::vector<int> expected_indptr = {0,4,4,7,10,13,15};
+    std::vector<int> expected_indices = {0,1,2,4,0,1,2,0,1,2,1,3,4,3,4};
+    std::vector<float> expected_data =  {1,1,1,5,4,4,4,5,5,5,2,4,4,5,5};
+
+    for(int i = 0; i < expected_indptr.size(); i++) {
+        assert(expected_indptr.at(i) == indptr[i]);
+    }
+    for(int i = 0; i < expected_indices.size(); i++) {
+        assert(expected_indices.at(i) == indices[i]);
+    }
+    for(int i = 0; i < expected_data.size(); i++) {
+        assert(expected_data.at(i) == data[i]);
+    }
+
+    //free memory
+    delete indptr;
+    delete indices;
+    delete data;
+    delete matrix;
+}
+
 int main() {
     std::cout << "Testing CSV is read in correctly...";
     test_read_csv();
@@ -144,6 +190,7 @@ int main() {
 
     std::cout << "Testing Sparse Matrix is Created correctly...";
     test_sparse_matrix();
+    test_missing_users();
     std::cout << "PASSED\n";
 
     std::cout << "Testing writing components to files...";

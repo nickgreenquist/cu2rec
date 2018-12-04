@@ -79,7 +79,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     rows = read_ratings(args.file_ratings)
-    train, test = split_per_user(rows, 1 - args.test_ratio)
+    train, test = split_true(rows, 1 - args.test_ratio)
 
     filepath, extension = os.path.splitext(args.file_ratings)
 

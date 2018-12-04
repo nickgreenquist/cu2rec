@@ -128,7 +128,6 @@ float *initialize_normal_array(int size, int n_factors) {
 }
 
 cu2rec::CudaCSRMatrix* createSparseMatrix(std::vector<Rating> *ratings, int rows, int cols) {
-    //int *indptr = new int[ratings->size()];
     std::vector<int> indptr_vec;
     int *indices = new int[ratings->size()];
     float *data = new float[ratings->size()];
@@ -136,8 +135,10 @@ cu2rec::CudaCSRMatrix* createSparseMatrix(std::vector<Rating> *ratings, int rows
     for(int i = 0; i < ratings->size(); ++i) {
         Rating r = ratings->at(i);
         if(r.userID != lastUser) {
-            indptr_vec.push_back(i);
-            lastUser = r.userID;
+            while(lastUser != r.userID) {
+                indptr_vec.push_back(i);
+                lastUser++;
+            }
         }
         indices[i] = r.itemID;
         data[i] = r.rating;
