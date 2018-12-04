@@ -1,6 +1,8 @@
 #include <assert.h>
 #include <math.h>       /* pow */
 #include <time.h>
+#include <tuple>
+#include <vector>
 
 #include "../util.h"
 #include "../matrix.h"
@@ -89,9 +91,56 @@ void test_loss() {
     cudaFree(item_bias_device);
 }
 
+void test_total_loss() {
+    vector<int> problem_sizes = { 1, 33, 1<<10, 1<<16 };
+    vector<int> grid_sizes = { 1, 20, 1000 };
+    vector<int> block_sizes = { 1, 16, 64 };
+    for (std::vector<int>::iterator i = problem_sizes.begin(); i != problem_sizes.end(); ++i) {
+        for (std::vector<int>::iterator j = grid_sizes.begin(); j != grid_sizes.end(); ++j) {
+            for (std::vector<int>::iterator k = block_sizes.begin(); k != block_sizes.end(); ++k) {
+                // Set up experiment sizes
+                int problem_size = (*i);
+                int grid_size = (*j);
+                int block_size = (*k);
+
+                // Input and output arrays
+                float *in_errors = new float[problem_size];
+                for (int i = 0; i < problem_size; ++i) {
+                    in_errors[i] = 1.0;
+                }
+                float *in_errors_device;
+                cudaMalloc(&in_errors_device, problem_size * sizeof(float));
+                cudaMemcpy(in_errors_device, in_errors, problem_size * sizeof(float), cudaMemcpyHostToDevice);
+
+                float *out_errors = new float[grid_size];
+                float *out_errors_device;
+                cudaMalloc(&out_errors_device, grid_size * sizeof(float));
+
+                // Call the kernel
+                float mae, rmse;
+                std::tie(mae, rmse) = get_error_metrics_gpu(in_errors_device, out_errors_device, out_errors, problem_size, grid_size, block_size);
+                
+                // Since all errors are 1.0, we expect the RMSE and MAE to be 1
+                // This makes sure the kernel covers all problem_size elements
+                assert(mae == 1);
+                assert(rmse == 1);
+
+                cudaFree(in_errors_device);
+                cudaFree(out_errors_device);
+                delete [] in_errors;
+                delete [] out_errors;
+            }
+        }
+    }
+}
+
 int main() {
     cout << "Testing Parallel Loss Function on test ratings...";
     test_loss();
+    cout << "PASSED\n";
+
+    cout << "Testing calculation of total loss...";
+    test_total_loss();
     cout << "PASSED\n";
 
     return 0;
