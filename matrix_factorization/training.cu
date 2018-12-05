@@ -2,6 +2,7 @@
 #include <cmath>
 #include <time.h>
 #include <tuple>
+#include <limits>
 
 #include "config.h"
 #include "loss.h"
@@ -87,6 +88,11 @@ void train(CudaCSRMatrix* train_matrix, CudaCSRMatrix* test_matrix, config::Conf
     double time_taken, time_taken_loss;
     clock_t start, end, start_loss, end_loss;
 
+    // Adaptive learning rate setup
+    float train_rmse, train_mae, validation_rmse, validation_mae, last_validation_rmse;
+    validation_rmse = validation_mae = std::numeric_limits<float>::max();
+    int current_patience = cfg->patience;
+
     // Training loop
     start = clock();
     for (int i = 0; i < cfg->total_iterations; ++i) {
@@ -99,7 +105,7 @@ void train(CudaCSRMatrix* train_matrix, CudaCSRMatrix* test_matrix, config::Conf
 
         // Calculate total loss periodically to check for improving loss
         // if((i + 1) % cfg->total_iterations == 0 || i == 0) {
-        if((i + 1) % 100 == 0 || i == 0) {
+        if((i + 1) % cfg->check_error == 0 || i == 0) {
             start_loss = clock();
 
             // Calculate error on train ratings
@@ -110,35 +116,42 @@ void train(CudaCSRMatrix* train_matrix, CudaCSRMatrix* test_matrix, config::Conf
             calculate_loss_gpu(P_device, Q_device, cfg->n_factors, test_matrix->rows, test_matrix->cols, test_matrix->nonzeros, test_matrix,
                                errors_test_device, user_bias_device, item_bias_device, global_bias);
 
+            // save previous metrics
+            last_validation_rmse = validation_rmse;
+
             // TODO add this as a param to train function
             bool use_gpu = true;
-            float mae, rmse;
             if(use_gpu) {
-                std::tie(mae, rmse) = get_error_metrics_gpu(errors_device, block_errors_device, block_errors_host, train_matrix->nonzeros, dim_grid_loss.x, dim_block_loss.x);
-                printf("TRAIN: Iteration %d GPU MAE: %f RMSE: %f\n", i + 1, mae, rmse);
-                std::tie(mae, rmse) = get_error_metrics_gpu(errors_test_device, block_errors_device, block_errors_host, test_matrix->nonzeros, dim_grid_loss.x, dim_block_loss.x);
-                printf("TEST: Iteration %d GPU MAE: %f RMSE: %f\n", i + 1, mae, rmse);
+                std::tie(train_mae, train_rmse) = get_error_metrics_gpu(errors_device, block_errors_device, block_errors_host, train_matrix->nonzeros, dim_grid_loss.x, dim_block_loss.x);
+                printf("TRAIN: Iteration %d GPU MAE: %f RMSE: %f\n", i + 1, train_mae, train_rmse);
+                std::tie(validation_mae, validation_rmse) = get_error_metrics_gpu(errors_test_device, block_errors_device, block_errors_host, test_matrix->nonzeros, dim_grid_loss.x, dim_block_loss.x);
+                printf("TEST: Iteration %d GPU MAE: %f RMSE: %f\n", i + 1, validation_mae, validation_rmse);
             } else {
-                std::tie(mae, rmse) = get_error_metrics_cpu(errors, errors_device, train_matrix->nonzeros);
-                printf("TRAIN: Iteration %d MAE: %f RMSE: %f\n", i + 1, mae, rmse);
-                std::tie(mae, rmse) = get_error_metrics_cpu(errors_test, errors_test_device, test_matrix->nonzeros);
-                printf("TEST: Iteration %d MAE: %f RMSE: %f\n", i + 1, mae, rmse);
+                std::tie(train_mae, train_rmse) = get_error_metrics_cpu(errors, errors_device, train_matrix->nonzeros);
+                printf("TRAIN: Iteration %d MAE: %f RMSE: %f\n", i + 1, train_mae, train_rmse);
+                std::tie(validation_mae, validation_rmse) = get_error_metrics_cpu(errors_test, errors_test_device, test_matrix->nonzeros);
+                printf("TEST: Iteration %d MAE: %f RMSE: %f\n", i + 1, validation_mae, validation_rmse);
             }
-            losses[i] = rmse;
+
+            // Update learning rate if needed
+            if(last_validation_rmse < validation_rmse) {
+                current_patience--;
+            }
+            if(current_patience <= 0) {
+                current_patience = cfg->patience;
+                cfg->learning_rate *= cfg->learning_rate_decay;
+                cfg->set_cuda_variables();
+
+                printf("New Learning Rate: %f\n: ", cfg->learning_rate);
+            }
+
+            // TODO: Do we still need to store this?
+            losses[i] = validation_rmse;
 
             end_loss = clock();
             time_taken_loss = ((double)(end_loss - start_loss))/ CLOCKS_PER_SEC;   
             printf("Time taken to calculate total loss is %lf\n\n", time_taken_loss);
         }
-        // TODO move these to loss.cu
-        // if(cfg->P_reg > 0)
-        //     total_loss_kernel<<<dim_grid_P_reg_loss, dim_block>>>(P_device->data, losses_device, P_device->rows * P_device->cols, i, cfg->P_reg);
-        // if(cfg->Q_reg > 0)
-        //     total_loss_kernel<<<dim_grid_Q_reg_loss, dim_block>>>(Q_device->data, losses_device, Q_device->rows * Q_device->cols, i, cfg->Q_reg);
-        // if(cfg->user_bias_reg > 0)
-        //     total_loss_kernel<<<dim_grid_user_bias_reg_loss, dim_block>>>(user_bias_device, losses_device, user_count, i, cfg->user_bias_reg);
-        // if(cfg->item_bias_reg > 0)
-        //     total_loss_kernel<<<dim_grid_item_bias_reg_loss, dim_block>>>(item_bias_device, losses_device, item_count, i, cfg->item_bias_reg);
 
         CHECK_CUDA(cudaGetLastError());
 
