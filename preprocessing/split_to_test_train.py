@@ -46,7 +46,7 @@ def split_true(rows, train_percent):
 
 def write_ratings(filename, ratings):
     with open(filename, "w", newline='') as file:
-        file.write("userId,movieId,rating,timestamp\n")
+        file.write("userId,itemId,rating\n")
         for row in ratings:
             row = [str(i) for i in row]
             line = ",".join(row)
@@ -56,18 +56,17 @@ def write_ratings(filename, ratings):
 
 def read_ratings(filename):
     rows = []
-    # userId,movieId,rating,timestamp
+    # userId, itemId, rating, <other ignored columns>
     with open(filename) as csvfile:
         readCSV = csv.reader(csvfile, delimiter=',')
         row_num = 0
         for row in readCSV:
             if row_num > 0:
                 userId = int(row[0])
-                movieId = int(row[1])
+                itemId = int(row[1])
                 rating = float(row[2])
-                timestamp = int(row[3])
 
-                rows.append([userId, movieId, rating, timestamp])
+                rows.append([userId, itemId, rating])
             row_num += 1
     return rows
 

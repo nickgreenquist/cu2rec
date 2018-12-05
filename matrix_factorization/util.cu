@@ -17,12 +17,11 @@ std::vector<Rating> readCSV(std::string filename, int *rows, int *cols, float *g
     if (ratingsFile.is_open()){
         int userID, itemID;
         float rating;
-        int timestamp;
         char delimiter;
 
         // Read the file line by line and skip the header
         ratingsFile.ignore(1000, '\n');
-        while(ratingsFile >> userID >> delimiter >> itemID >> delimiter >> rating >> delimiter >> timestamp) {
+        while(ratingsFile >> userID >> delimiter >> itemID >> delimiter >> rating) {
             ratings.push_back({userID - 1, itemID - 1, rating});
             max_row = std::max(userID, max_row);
             max_col = std::max(itemID, max_col);
