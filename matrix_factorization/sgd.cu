@@ -5,7 +5,6 @@
 
 /* To index element (i,j) of a 2D array stored as 1D */
 #define index(i, j, N)  ((i)*(N)) + (j)
-#define warp_size 32 //TODO: we need to get device props
 
 /*************************/
 /* CURAND INITIALIZATION */

@@ -10,9 +10,6 @@
 #include "matrix.h"
 #include "util.h"
 
-#define index(i, j, N)  ((i)*(N)) + (j)
-#define warp_size 32 //TODO: we need to get device props
-
 using namespace cu2rec;
 
 // PARALLEL
@@ -33,13 +30,12 @@ __global__ void loss_kernel(int factors, int user_count, int item_count, const f
     }
 }
 
-void calculate_loss_gpu(CudaDenseMatrix* P_d, CudaDenseMatrix* Q_d, int factors, int user_count, int item_count, int num_ratings, 
+void calculate_loss_gpu(CudaDenseMatrix* P_d, CudaDenseMatrix* Q_d, config::Config* cfg, int user_count, int item_count, int num_ratings, 
                         CudaCSRMatrix* matrix, float * error_d, float * user_bias,  float * item_bias, float global_bias) {
-    int n_threads = 32;
-    dim3 dimBlock(n_threads);
-    dim3 dimGrid(user_count / n_threads + 1);
+    dim3 dimBlock(cfg->n_threads);
+    dim3 dimGrid(user_count / cfg->n_threads + 1);
     loss_kernel<<<dimGrid, dimBlock>>>(
-        factors, user_count, item_count, P_d->data, Q_d->data,
+        cfg->n_factors, user_count, item_count, P_d->data, Q_d->data,
         matrix->indptr, matrix->indices, matrix->data, error_d,
         user_bias, item_bias, global_bias);
     CHECK_CUDA(cudaGetLastError());

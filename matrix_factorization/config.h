@@ -18,9 +18,10 @@ namespace config {
 
     class Config {
         public:
+            // CUDA variables
             int cur_iterations = 0;
-            int total_iterations = 10000;
-            int n_factors = 150;
+            int total_iterations = 1000;
+            int n_factors = 50;
             float learning_rate = 0.07;
             int seed = 42;
             float P_reg = 0.08;
@@ -29,6 +30,8 @@ namespace config {
             float item_bias_reg = 0.003;
             bool is_train = true;
 
+            // Host variables
+            int n_threads = 32; // Must be 2^0 to 2^9
             int check_error = 100;
             float patience = 3;
             float learning_rate_decay = 0.2;

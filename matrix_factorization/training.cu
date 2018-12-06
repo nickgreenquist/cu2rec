@@ -10,8 +10,6 @@
 #include "sgd.h"
 #include "util.h"
 
-#define index(i, j, N)  ((i)*(N)) + (j)
-
 using namespace cu2rec;
 
 void train(CudaCSRMatrix* train_matrix, CudaCSRMatrix* test_matrix, config::Config* cfg, float **P_ptr, float **Q_ptr, float *Q, float **losses_ptr,
@@ -61,15 +59,14 @@ void train(CudaCSRMatrix* train_matrix, CudaCSRMatrix* test_matrix, config::Conf
     CHECK_CUDA(cudaMemcpy(item_bias_target, item_bias, item_count * sizeof(float), cudaMemcpyHostToDevice));
 
     // Dimensions
-    int n_threads = 32;
-    dim3 dim_block(n_threads);
-    dim3 dim_grid_sgd(user_count / n_threads + 1);
-    dim3 dim_grid_loss(256);
-    dim3 dim_block_loss(64); // Must be 2^0 to 2^9
-    dim3 dim_grid_P_reg_loss(P_device->rows * P_device->cols / n_threads + 1);
-    dim3 dim_grid_Q_reg_loss(Q_device->rows * Q_device->cols / n_threads + 1);
-    dim3 dim_grid_user_bias_reg_loss(user_count / n_threads + 1);
-    dim3 dim_grid_item_bias_reg_loss(item_count / n_threads + 1);
+    dim3 dim_block(cfg->n_threads);
+    dim3 dim_grid_sgd(user_count / cfg->n_threads + 1);
+    dim3 dim_grid_loss(256); // TODO: figure out a way to use a config value for this
+    dim3 dim_block_loss(2 * cfg->n_threads);
+    dim3 dim_grid_P_reg_loss(P_device->rows * P_device->cols / cfg->n_threads + 1);
+    dim3 dim_grid_Q_reg_loss(Q_device->rows * Q_device->cols / cfg->n_threads + 1);
+    dim3 dim_grid_user_bias_reg_loss(user_count / cfg->n_threads + 1);
+    dim3 dim_grid_item_bias_reg_loss(item_count / cfg->n_threads + 1);
 
     // Create loss per block
     float *block_errors_host = new float[dim_grid_loss.x];
@@ -103,17 +100,16 @@ void train(CudaCSRMatrix* train_matrix, CudaCSRMatrix* test_matrix, config::Conf
                                                 global_bias);
         CHECK_CUDA(cudaGetLastError());
 
-        // Calculate total loss periodically to check for improving loss
-        // if((i + 1) % cfg->total_iterations == 0 || i == 0) {
-        if((i + 1) % cfg->check_error == 0 || i == 0) {
+        // Calculate total loss first, last, and every check_error iterations
+        if((i + 1) % cfg->check_error == 0 || i == 0 || (i + 1) % cfg->total_iterations == 0) {
             start_loss = clock();
 
             // Calculate error on train ratings
-            calculate_loss_gpu(P_device, Q_device, cfg->n_factors, user_count, item_count, train_matrix->nonzeros, train_matrix,
+            calculate_loss_gpu(P_device, Q_device, cfg, user_count, item_count, train_matrix->nonzeros, train_matrix,
                                errors_device, user_bias_device, item_bias_device, global_bias);
 
             // Calculate error on test ratings
-            calculate_loss_gpu(P_device, Q_device, cfg->n_factors, test_matrix->rows, test_matrix->cols, test_matrix->nonzeros, test_matrix,
+            calculate_loss_gpu(P_device, Q_device, cfg, test_matrix->rows, test_matrix->cols, test_matrix->nonzeros, test_matrix,
                                errors_test_device, user_bias_device, item_bias_device, global_bias);
 
             // save previous metrics

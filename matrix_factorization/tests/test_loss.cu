@@ -4,6 +4,7 @@
 #include <tuple>
 #include <vector>
 
+#include "../config.h"
 #include "../util.h"
 #include "../matrix.h"
 #include "../loss.h"
@@ -13,7 +14,6 @@
 using namespace std;
 
 string filename = "../../data/test/test_ratings.csv";
-int factors = 2;
 
 void test_loss() {
     int rows, cols;
@@ -26,19 +26,23 @@ void test_loss() {
     // Create Sparse Matrix in Device memory
     cu2rec::CudaCSRMatrix* matrix = createSparseMatrix(&ratings, rows, cols);
 
+    // Hyperparams
+    config::Config *cfg = new config::Config();
+    cfg->n_factors = 2;
+
     // create temp P and Q
     int user_count = rows;
     int item_count = cols;
-    float *P = new float[user_count * factors];
-    float *Q = new float[item_count * factors];
+    float *P = new float[user_count * cfg->n_factors];
+    float *Q = new float[item_count * cfg->n_factors];
     for(int u = 0; u < user_count; u++) {
-        for(int f = 0; f < factors; f++) {
-            P[index(u, f, factors)] = 1.0;
+        for(int f = 0; f < cfg->n_factors; f++) {
+            P[index(u, f, cfg->n_factors)] = 1.0;
         }
     }
     for(int i = 0; i < item_count; i++) {
-        for(int f = 0; f < factors; f++) {
-            Q[index(i, f, factors)] = 1.0;
+        for(int f = 0; f < cfg->n_factors; f++) {
+            Q[index(i, f, cfg->n_factors)] = 1.0;
         }
     }
 
@@ -65,9 +69,9 @@ void test_loss() {
     cudaMemcpy(item_bias_device, item_bias, item_count * sizeof(float), cudaMemcpyHostToDevice);
     
     // Turn P and Q into CudaDenseMatrices on GPU and calculate the loss using GPU
-    CudaDenseMatrix* P_d = new CudaDenseMatrix(user_count, factors, P);
-    CudaDenseMatrix* Q_d = new CudaDenseMatrix(item_count, factors, Q);
-    calculate_loss_gpu(P_d, Q_d, factors, user_count, item_count, ratings.size(), matrix, error_d, user_bias_device, item_bias_device, global_bias);
+    CudaDenseMatrix* P_d = new CudaDenseMatrix(user_count, cfg->n_factors, P);
+    CudaDenseMatrix* Q_d = new CudaDenseMatrix(item_count, cfg->n_factors, Q);
+    calculate_loss_gpu(P_d, Q_d, cfg, user_count, item_count, ratings.size(), matrix, error_d, user_bias_device, item_bias_device, global_bias);
 
     // move array of errors back to host
     cudaMemcpy(error, error_d, ratings.size() * sizeof(float), cudaMemcpyDeviceToHost);
