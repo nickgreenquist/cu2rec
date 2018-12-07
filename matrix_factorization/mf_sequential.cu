@@ -101,38 +101,43 @@ int main(int argc, char **argv){
             // Pick a random item for this user
             int low = train_indptr[x];
             int high = train_indptr[x+1];
-            int y_i = low + ( rand() % ( high - low + 1 ) );
+            if(low != high) {
+                std::random_device rd; // obtain a random number from hardware
+                std::mt19937 eng(rd()); // seed the generator
+                std::uniform_int_distribution<> distr(low, high); // define the range
+                int y_i = distr(eng);
 
-            // get needed components into variables
-            int y = train_indices[y_i];
-            const float * p = &P[x * cfg->n_factors];
-            const float * q = &Q[y * cfg->n_factors];
-            float ub = user_bias[x];
-            float ib = item_bias[y];
+                // get needed components into variables
+                int y = train_indices[y_i];
+                const float * p = &P[x * cfg->n_factors];
+                const float * q = &Q[y * cfg->n_factors];
+                float ub = user_bias[x];
+                float ib = item_bias[y];
 
-            // get the error random item y_i
-            float pred = global_bias + ub + ib;
-            for (int f = 0; f < cfg->n_factors; f++)
-                pred += q[f]*p[f];
-            float error_y_i = train_data[y_i] - pred;
+                // get the error random item y_i
+                float pred = global_bias + ub + ib;
+                for (int f = 0; f < cfg->n_factors; f++)
+                    pred += q[f]*p[f];
+                float error_y_i = train_data[y_i] - pred;
 
-            // Update all components
-            for(int f = 0; f < cfg->n_factors; ++f) {
-                int p_index = index(x, f, cfg->n_factors);
-                int q_index = index(y, f, cfg->n_factors);
+                // Update all components
+                for(int f = 0; f < cfg->n_factors; ++f) {
+                    int p_index = index(x, f, cfg->n_factors);
+                    int q_index = index(y, f, cfg->n_factors);
 
-                // update components
-                P[p_index] += cfg->learning_rate * (error_y_i * Q[q_index] - cfg->P_reg * P[p_index]);
-                Q[q_index] += cfg->learning_rate * (error_y_i * P[p_index] - cfg->Q_reg * Q[q_index]);
+                    // update components
+                    P[p_index] += cfg->learning_rate * (error_y_i * Q[q_index] - cfg->P_reg * P[p_index]);
+                    Q[q_index] += cfg->learning_rate * (error_y_i * P[p_index] - cfg->Q_reg * Q[q_index]);
+                }
+
+                // update biases
+                user_bias[x] += cfg->learning_rate * (error_y_i - cfg->user_bias_reg * ub);
+                item_bias[y] += cfg->learning_rate * (error_y_i - cfg->item_bias_reg * ib);
             }
-
-            // update biases
-            user_bias[x] += cfg->learning_rate * (error_y_i - cfg->user_bias_reg * ub);
-            item_bias[y] += cfg->learning_rate * (error_y_i - cfg->item_bias_reg * ib);
         }
 
         // Calculate total loss first, last, and every check_error iterations
-        if((i + 1) % cfg->check_error == 0 || i == 0 || (i + 1) % cfg->total_iterations == 0) {
+        if((i + 1) % 1 == 0 || i == 0 || (i + 1) % cfg->total_iterations == 0) {
             float train_rmse, train_mae, validation_rmse, validation_mae;
             train_rmse = train_mae = validation_rmse = validation_mae = 0.0;
             
