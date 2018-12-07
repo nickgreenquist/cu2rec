@@ -126,8 +126,10 @@ int main(int argc, char **argv){
                     int q_index = index(y, f, cfg->n_factors);
 
                     // update components
-                    P[p_index] += cfg->learning_rate * (error_y_i * Q[q_index] - cfg->P_reg * P[p_index]);
-                    Q[q_index] += cfg->learning_rate * (error_y_i * P[p_index] - cfg->Q_reg * Q[q_index]);
+                    float p_old = P[p_index];
+                    float q_old = Q[q_index];
+                    P[p_index] += cfg->learning_rate * (error_y_i * q_old - cfg->P_reg * P[p_index]);
+                    Q[q_index] += cfg->learning_rate * (error_y_i * p_old - cfg->Q_reg * Q[q_index]);
                 }
 
                 // update biases
@@ -137,10 +139,10 @@ int main(int argc, char **argv){
         }
 
         // Calculate total loss first, last, and every check_error iterations
-        if((i + 1) % 1 == 0 || i == 0 || (i + 1) % cfg->total_iterations == 0) {
-            float train_rmse, train_mae, validation_rmse, validation_mae;
+        if((i + 1) % cfg->check_error == 0 || i == 0 || (i + 1) % cfg->total_iterations == 0) {
+            float train_rmse, train_mae, validation_rmse, validation_mae; 
             train_rmse = train_mae = validation_rmse = validation_mae = 0.0;
-            
+                       
             // Calculate loss on train ratings
             for(int x = 0; x < rows; x++) {
                 const float * p = &P[x * cfg->n_factors];
