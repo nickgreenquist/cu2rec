@@ -116,9 +116,9 @@ void test_total_loss() {
                 cudaMalloc(&in_errors_device, problem_size * sizeof(float));
                 cudaMemcpy(in_errors_device, in_errors, problem_size * sizeof(float), cudaMemcpyHostToDevice);
 
-                float *out_errors = new float[grid_size];
-                float *out_errors_device;
-                cudaMalloc(&out_errors_device, grid_size * sizeof(float));
+                double *out_errors = new double[grid_size];
+                double *out_errors_device;
+                cudaMalloc(&out_errors_device, grid_size * sizeof(double));
 
                 // Call the kernel
                 float mae, rmse;
