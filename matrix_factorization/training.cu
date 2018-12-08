@@ -82,8 +82,8 @@ void train(CudaCSRMatrix* train_matrix, CudaCSRMatrix* test_matrix, config::Conf
     CHECK_CUDA(cudaGetLastError());
 
     // to measure time taken by a specific part of the code 
-    double time_taken, time_taken_loss;
-    clock_t start, end, start_loss, end_loss;
+    double time_taken;
+    clock_t start, end;
 
     // Adaptive learning rate setup
     float train_rmse, train_mae, validation_rmse, validation_mae, last_validation_rmse;
@@ -102,7 +102,6 @@ void train(CudaCSRMatrix* train_matrix, CudaCSRMatrix* test_matrix, config::Conf
 
         // Calculate total loss first, last, and every check_error iterations
         if((i + 1) % cfg->check_error == 0 || i == 0 || (i + 1) % cfg->total_iterations == 0) {
-            start_loss = clock();
 
             // Calculate error on train ratings
             calculate_loss_gpu(P_device, Q_device, cfg, user_count, item_count, train_matrix->nonzeros, train_matrix,
@@ -143,10 +142,6 @@ void train(CudaCSRMatrix* train_matrix, CudaCSRMatrix* test_matrix, config::Conf
 
             // TODO: Do we still need to store this?
             losses[i] = validation_rmse;
-
-            end_loss = clock();
-            time_taken_loss = ((double)(end_loss - start_loss))/ CLOCKS_PER_SEC;   
-            printf("Time taken to calculate total loss is %lf\n\n", time_taken_loss);
         }
 
         CHECK_CUDA(cudaGetLastError());
