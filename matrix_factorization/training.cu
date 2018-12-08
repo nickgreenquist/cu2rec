@@ -69,10 +69,10 @@ void train(CudaCSRMatrix* train_matrix, CudaCSRMatrix* test_matrix, config::Conf
     dim3 dim_grid_item_bias_reg_loss(item_count / cfg->n_threads + 1);
 
     // Create loss per block
-    float *block_errors_host = new float[dim_grid_loss.x];
-    float *block_errors_device;
-    CHECK_CUDA(cudaMalloc(&block_errors_device, dim_grid_loss.x * sizeof(float)));
-    CHECK_CUDA(cudaMemset(block_errors_device, 0, dim_grid_loss.x * sizeof(float)));
+    double *block_errors_host = new double[dim_grid_loss.x];
+    double *block_errors_device;
+    CHECK_CUDA(cudaMalloc(&block_errors_device, dim_grid_loss.x * sizeof(double)));
+    CHECK_CUDA(cudaMemset(block_errors_device, 0, dim_grid_loss.x * sizeof(double)));
 
     // Create curand state
     curandState *d_state;

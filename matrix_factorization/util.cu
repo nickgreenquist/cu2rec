@@ -10,7 +10,7 @@ using namespace std;
 std::vector<Rating> readCSV(std::string filename, int *rows, int *cols, float *global_bias) {
     int max_row = 0;
     int max_col = 0;
-    float sum_ratings = 0;
+    double sum_ratings = 0;
     std::ifstream ratingsFile(filename);
     std::vector<Rating> ratings;
 
@@ -18,7 +18,6 @@ std::vector<Rating> readCSV(std::string filename, int *rows, int *cols, float *g
         int userID, itemID;
         float rating;
         char delimiter;
-
         // Read the file line by line and skip the header
         ratingsFile.ignore(1000, '\n');
         while(ratingsFile >> userID >> delimiter >> itemID >> delimiter >> rating) {
