@@ -1,6 +1,6 @@
 """Maps the Netflix ratings to a format readable by mf.cu.
 
-Make sure you download the Netflix ratings from .
+Make sure you download the Netflix ratings from the link in the README.
 """
 
 import csv

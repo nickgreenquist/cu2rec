@@ -20,6 +20,11 @@
 1. `make mf`
 2. `bin/mf -c <config_file> <ratings_file_train> <ratings_file_test>`
 
+## Experimental Results
+### Netflix
+1. Training Set MAE: 0.683889 RMSE: 0.873118
+2. Test Set MAE: 0.776981 RMSE: 0.995426
+
 ## Getting recommendations for a user
 1. Make sure you get the user data into the same ratings format as MovieLens.
 2. `make predict`
