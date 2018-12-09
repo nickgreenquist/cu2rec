@@ -7,6 +7,13 @@ using namespace std;
 
 // File read and write utils
 
+/** Reads in a CSV file of ratings. The file needs to be structured in the format of
+ * `userId,itemId,rating` and needs to have a header file. The userId and itemId must
+ * be sequential and start from 1. It also assumes that the number of users and the
+ * number of items are fixed, and are equal to the maximum user id and maximum
+ * integer id respectively. Those, and the global bias (mean), are assigned to their
+ * given pointers.
+ */
 std::vector<Rating> readCSV(std::string filename, int *rows, int *cols, float *global_bias) {
     int max_row = 0;
     int max_col = 0;
@@ -37,6 +44,11 @@ std::vector<Rating> readCSV(std::string filename, int *rows, int *cols, float *g
     }
 }
 
+/** Reads in a 2D float array that is saved as a CSV file.
+ * The 2D float array gets converted into a 1D array in row-major
+ * format, and the number of rows and columns get put into their
+ * respective pointers.
+ */
 float* read_array(const char *file_path, int *n_rows_ptr, int *n_cols_ptr) {
     std::ifstream array_file(file_path);
     vector<float> nums;
@@ -68,6 +80,9 @@ float* read_array(const char *file_path) {
     return read_array(file_path, &n_rows, &n_cols);
 }
 
+/** Writes in a 2D float array (that is held as a 1D array in memory)
+ * to a CSV file.
+ */
 void writeCSV(char *file_path, float *data, int rows, int cols) {
     FILE *fp;
     fp = fopen(file_path, "w");
@@ -103,6 +118,9 @@ void printCSV(std::vector<Rating> *ratings) {
 
 // Array and matrix utils
 
+/** Initializes a normally distributed array with the given mean and the
+ * given standard deviation (scaled down by n_factors).
+ */
 float* initialize_normal_array(int size, int n_factors, float mean, float stddev, int seed) {
     mt19937 generator(seed);
     normal_distribution<float> distribution(mean, stddev / n_factors);
@@ -125,6 +143,12 @@ float *initialize_normal_array(int size, int n_factors) {
     return initialize_normal_array(size, n_factors, 0, 1);
 }
 
+/** Creates a CUDA sparse matrix from the given ratings.
+ * It stores the data in a manner that makes it easily accessible by row (ie user)
+ * https://en.wikipedia.org/wiki/Sparse_matrix#Compressed_sparse_row_(CSR,_CRS_or_Yale_format)
+ * If there is a user with no ratings (ie, a missing userId), it will be included in the matrix
+ * as repeated values in indptr.
+ */
 cu2rec::CudaCSRMatrix* createSparseMatrix(std::vector<Rating> *ratings, int rows, int cols) {
     std::vector<int> indptr_vec;
     int *indices = new int[ratings->size()];
@@ -154,6 +178,9 @@ cu2rec::CudaCSRMatrix* createSparseMatrix(std::vector<Rating> *ratings, int rows
     return matrix;
 }
 
+/** Gets the total number of free bytes in the GPU memory.
+ * Useful for debugging.
+ */
 size_t getFreeBytes(const int where, size_t *total_bytes) {
     size_t free_bytes;
 
@@ -167,6 +194,8 @@ size_t getFreeBytes(const int where, size_t *total_bytes) {
     return free_bytes;
 }
 
+/** Convenience device function for calculating predictions.
+ */
 __device__ float get_prediction(int factors, const float *p, const float *q, float user_bias, float item_bias, float global_bias) {
         float pred = global_bias + user_bias + item_bias;
         for (int f = 0; f < factors; f++)

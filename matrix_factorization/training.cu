@@ -12,6 +12,12 @@
 
 using namespace cu2rec;
 
+/** Main loop for training the Matrix Factorization model. It takes all its configurations from the cfg
+ * object, uses the train_matrix as the training data and test_matrix as the test data.
+ * When it is done, it puts the trained P, Q, user_bias, and item_bias files into its respective pointers
+ * to return them. The training loop also implements learning rate scheduling, and outputs the time
+ * training takes (doesn't include the memcpy calls).
+ */
 void train(CudaCSRMatrix* train_matrix, CudaCSRMatrix* test_matrix, config::Config* cfg, float **P_ptr, float **Q_ptr, float *Q, float **losses_ptr,
            float **user_bias_ptr, float **item_bias_ptr, float *item_bias, float global_bias) {
     int user_count = train_matrix->rows;
@@ -185,6 +191,8 @@ void train(CudaCSRMatrix* train_matrix, CudaCSRMatrix* test_matrix, config::Conf
     delete [] block_errors_host;
 }
 
+/** Initializes Q and item bias randomly and passes them into the training method.
+ */
 void train(CudaCSRMatrix* train_matrix, CudaCSRMatrix* test_matrix, config::Config* cfg, float **P_ptr, float **Q_ptr, float **losses_ptr,
            float **user_bias_ptr, float **item_bias_ptr, float global_bias) {
     int item_count = train_matrix->cols;

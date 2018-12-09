@@ -6,9 +6,8 @@
 /* To index element (i,j) of a 2D array stored as 1D */
 #define index(i, j, N)  ((i)*(N)) + (j)
 
-/*************************/
-/* CURAND INITIALIZATION */
-/*************************/
+/** Initializes the random seed for each user.
+ */
 __global__ void initCurand(curandState *state, unsigned long seed, int n_rows){
     int x = blockDim.x * blockIdx.x + threadIdx.x;
     if(x < n_rows) {
@@ -16,11 +15,14 @@ __global__ void initCurand(curandState *state, unsigned long seed, int n_rows){
     }
 }
 
+/** Kernel for calculating the gradient descent updates. Each thread does one random item per user,
+ * and multiple updates to the same item does not stack up, but rather, overwrite each other
+ * as mentioned in Hogwild.
+ */
 __global__ void sgd_update(int *indptr, int *indices, const float *data, float *P, float *Q, float *Q_target, 
                            int n_rows, float *user_bias, float *item_bias,
                            float *item_bias_target, curandState *my_curandstate,
                            float global_bias) {
-
     // One thread per user
     int x = blockDim.x * blockIdx.x + threadIdx.x;
     if(x < n_rows) {
@@ -28,9 +30,10 @@ __global__ void sgd_update(int *indptr, int *indices, const float *data, float *
         // pick a random item y_i
         int low = indptr[x];
         int high = indptr[x+1];
+        // Only do SGD if the user has at least one item
         if(low != high) {
             float myrandf = curand_uniform(&my_curandstate[x]); // random between (0, 1]
-            int y_i = (int) ceil(myrandf * (high - low)) - 1 + low;
+            int y_i = (int) ceil(myrandf * (high - low)) - 1 + low; // random integer between [low, high)
 
             // move some reused values to registers
             int y = indices[y_i];

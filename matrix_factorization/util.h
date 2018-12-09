@@ -14,6 +14,8 @@
 /* To index element (i,j) of a 2D array stored as 1D */
 #define index(i, j, N)  ((i)*(N)) + (j)
 
+/** Convenience struct for holding the userid-itemid-rating tuple.
+ */
 struct Rating
 {
     int userID;

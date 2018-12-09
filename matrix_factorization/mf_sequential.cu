@@ -1,3 +1,7 @@
+/** This is the sequential version of the mf.cu script. Works and behaves the same way,
+ * just does everything in CPU for 1 to 1 comparison.
+ */
+
 #include <getopt.h>
 #include <stdlib.h>
 #include <math.h>

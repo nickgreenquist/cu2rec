@@ -1,3 +1,10 @@
+/** This script uses the trained Matrix Factorization model components and does a partial
+ * fit for a new user in order to provide recommendations. Partial fit only trains P
+ * and user bias, and leaves the Q, item bias, and global bias the same.
+ * It will also take in a config file (the format available in config.cu) because it needs
+ * to know the number of factors.
+ */
+
 #include <getopt.h>
 #include <vector>
 
@@ -5,6 +12,8 @@
 #include "matrix.h"
 #include "util.h"
 
+/** Calculates predicted ratings for all items
+ */
 float* predict_ratings(float *P_u, float *Q, float user_bias, float *item_bias, float global_bias,
                        int n_items, int n_factors) {
     float *predictions = new float[n_items];
@@ -30,6 +39,9 @@ void print_predictions(float *predictions, int n_items) {
 
 typedef std::pair<float,int> rated_item;
 
+/** Custom comparator for comparing rated_items and sorting them
+ * from high to low.
+ */
 bool comparator(const rated_item& l, const rated_item& r) {
     return l.first > r.first;
 }
@@ -61,17 +73,14 @@ int main(int argc, char **argv) {
     if(argc < 2) {
         return 2;
     }
-    bool use_partial_fit = false;
+    // Read in the filenames
     std::string filename_config;
     std::string filename_item_bias;
     std::string filename_global_bias;
     std::string filename_Q;
     int o;
-    while((o = getopt(argc, argv, "pc:i:g:q:")) != -1) {
+    while((o = getopt(argc, argv, "c:i:g:q:")) != -1) {
         switch(o) {
-            case 'p':
-                use_partial_fit = true;
-                break;
             case 'c':
                 filename_config = optarg;
                 break;
@@ -89,16 +98,21 @@ int main(int argc, char **argv) {
                 return 1;
         }
     }
+
+    // Read in the config
     config::Config *cfg = new config::Config();
     cfg->read_config(filename_config);
     cfg->is_train = false;
     cfg->set_cuda_variables();
     int n_items, n_factors;
+
+    // Read in Q, item bias, and global bias
     float *item_bias = read_array(filename_item_bias.c_str(), &n_factors, &n_items);
     float *global_bias_arr = read_array(filename_global_bias.c_str());
     float global_bias = global_bias_arr[0];
     float *Q = read_array(filename_Q.c_str(), &n_items, &n_factors);
 
+    // Read in user ratings as a CSV file
     std::string filename_user_ratings = argv[optind++];
     int rows, cols;
     float user_mean;
@@ -111,11 +125,13 @@ int main(int argc, char **argv) {
     float *P, *losses, *user_bias;
     train(matrix, matrix, cfg, &P, &Q, Q, &losses, &user_bias, &item_bias, item_bias, global_bias);
 
+    // Get predictions and print them
     float *predictions = predict_ratings(P, Q, user_bias[0], item_bias, global_bias, n_items, cfg->n_factors);
     print_predictions(predictions, n_items);
     vector<rated_item> items = get_recommendations(&ratings, predictions, n_items);
     print_recommendations(&items);
 
+    // Free memory
     delete cfg;
     delete matrix;
     delete [] losses;

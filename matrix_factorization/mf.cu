@@ -1,3 +1,10 @@
+/** This script trains a Matrix Factorization model and outputs its components.
+ * It can optionally take in a config file (the format available in config.cu).
+ * It also takes in two files, one training and one test, and calculates the
+ * RMSE and MAE on both files. When the training is done, it outputs the
+ * P, Q, user bias, item bias, and the global bias into its respective files.
+ */
+
 #include <getopt.h>
 
 #include "config.h"
