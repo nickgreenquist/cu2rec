@@ -1,3 +1,6 @@
+/** Tests config functionality
+ */
+
 #include <assert.h>
 
 #include "../config.h"

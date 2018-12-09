@@ -1,3 +1,6 @@
+/** Tests the whole training loop
+ */
+
 #include <assert.h>
 #include <vector>
 

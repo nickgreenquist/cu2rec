@@ -1,3 +1,6 @@
+/** Tests calculating the gradient descent update
+ */
+
 #include <assert.h>
 #include <vector>
 #include <math.h>
@@ -120,7 +123,9 @@ void test_sgd() {
     cudaMemcpy(user_bias_updated, user_bias_device, rows * sizeof(float), cudaMemcpyDeviceToHost);
     cudaMemcpy(item_bias_updated, item_bias_device, cols * sizeof(float), cudaMemcpyDeviceToHost);
 
-    // check for correct components
+    // Check for correct components
+    // Since there's a race condition inherently in the code (Hogwild),
+    // we cannot check for exact correctness.
     for(int i = 0; i < rows; ++i) {
         assert(!std::isnan(P_updated[i]));
     }

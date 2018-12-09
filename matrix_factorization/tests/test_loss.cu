@@ -1,3 +1,6 @@
+/** Tests calculating the errors and the total loss
+ */
+
 #include <assert.h>
 #include <math.h>       /* pow */
 #include <time.h>
@@ -15,6 +18,8 @@ using namespace std;
 
 string filename = "../../data/test/test_ratings.csv";
 
+/** Tests the calculation of errors
+ */
 void test_loss() {
     int rows, cols;
     float global_bias;
@@ -95,6 +100,9 @@ void test_loss() {
     cudaFree(item_bias_device);
 }
 
+/** Tests the calculation of total loss with
+ * multiple sizes.
+ */
 void test_total_loss() {
     vector<int> problem_sizes = { 1, 33, 1<<10, 1<<16 };
     vector<int> grid_sizes = { 1, 20, 1000 };

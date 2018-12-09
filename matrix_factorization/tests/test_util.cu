@@ -1,3 +1,6 @@
+/** Tests the utility functions
+ */
+
 #include <iostream>     // std::cout
 #include <assert.h>
 #include <vector>
@@ -42,6 +45,8 @@ void test_read_array() {
     delete [] arr;
 }
 
+/** Tests writing out the factors to a file
+ */
 void test_output() {
     int user_count = 6;
     int item_count = 5;
@@ -88,6 +93,8 @@ void test_output() {
     delete [] item_bias;
 }
 
+/** Tests reading in a sparse matrix
+ */
 void test_sparse_matrix() {
     // Reread CSV so this test is self contained
     int rows, cols;
@@ -134,6 +141,8 @@ void test_sparse_matrix() {
     delete matrix;
 }
 
+/** Tests reading in a CSV with missing users.
+ */
 void test_missing_users() {
     int rows, cols;
     float global_bias;
