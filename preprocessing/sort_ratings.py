@@ -1,24 +1,16 @@
+"""Sorts the data CSV using userId first and itemId second.
+"""
+
 import argparse
 import csv
 import os
-import random
 
-def write_ratings(filename, ratings):
-    with open(filename, "w", newline='') as file:
-        file.write("userId,itemId,rating\n")
-        for row in ratings:
-            row = [str(i) for i in row]
-            line = ",".join(row)
-            file.write(line)
-            file.write('\n')
+from map_items import write_to_file
 
 
 def read_ratings(filename):
     rows = []
     # userId, itemId, rating, <other ignored columns>
-    unique_users = set()
-    unique_items = set()
-    user_to_rating_count = {}
     with open(filename) as csvfile:
         readCSV = csv.reader(csvfile, delimiter=',')
         row_num = 0
@@ -47,4 +39,4 @@ if __name__ == "__main__":
 
     filepath, extension = os.path.splitext(args.file_ratings)
 
-    write_ratings("{}_sorted{}".format(filepath, extension), rows)
+    write_to_file("{}_sorted{}".format(filepath, extension), rows)
