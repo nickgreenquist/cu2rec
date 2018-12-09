@@ -5,7 +5,9 @@ and third is rating. If different, a different function can be passed into
 map_rows as the get_info parameter.
 """
 
+import argparse
 import csv
+import os
 
 
 def get_sequential_info(row):
@@ -95,6 +97,10 @@ def process_file(filename_in, filename_out):
 
 
 if __name__ == '__main__':
-    filename_in = "../data/ratings.csv"
-    filename_out = "../data/ratings_mapped.csv"
-    process_file(filename_in, filename_out)
+    parser = argparse.ArgumentParser(description="Maps user and item ids to sequential ids, starting from 1")
+    parser.add_argument('file_ratings', type=str, help='the path to the ratings file to map')
+    args = parser.parse_args()
+
+    filepath, extension = os.path.splitext(args.file_ratings)
+    filename_out = "{}_mapped{}".format(filepath, extension)
+    process_file(args.file_ratings, filename_out)

@@ -3,7 +3,7 @@
 cu2rec is a Matrix Factorization library designed to accelerate training Recommender Systems models using GPUs in CUDA. It implements Parallel Stochastic Gradient Descent for training the matrix factorization model.
 
 ## Data
-The input data should be a CSV file in the form of `userId,itemId,rating` and should have an header. If the user ids and the item ids are not sequential, run `python preprocessing/map_items.py` to convert the user ids and item ids into sequential integers, starting with 1.
+The input data should be a CSV file in the form of `userId,itemId,rating` and should have an header. If the user ids and the item ids are not sequential, run `python preprocessing/map_items.py <ratings_file>` to convert the user ids and item ids into sequential integers, starting with 1.
 
 Once you have a mapped CSV, you can use `python preprocessing/split_to_test_train.py <mapped_file> <test_ratio>` to split the data into training and tests sets to use with `mf.cu`.
 
@@ -11,7 +11,7 @@ Alternatively, you can also use the datasets below:
 
 ### Movielens
 1. Download movielens data [here](https://grouplens.org/datasets/movielens/) and save in `data` folder.
-2. Run `python preprocessing/map_items.py` to create a user-item mapped ratings file.
+2. Run `python preprocessing/map_items.py <ratings_file>` to create a user-item mapped ratings file.
 3. Run `python preprocessing/split_to_test_train.py <mapped_file> <test_ratio>` to split it into training and test files.
 
 ### Netflix
