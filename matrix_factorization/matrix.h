@@ -5,6 +5,9 @@
 
 namespace cu2rec {
     /// Thin wrappers of CUDA memory: copies to from host, frees in destructor
+
+    // This stores the data in a manner that makes it easily accessible by row (ie user)
+    // https://en.wikipedia.org/wiki/Sparse_matrix#Compressed_sparse_row_(CSR,_CRS_or_Yale_format)
     struct CudaCSRMatrix {
         CudaCSRMatrix(int rows, int cols, int nonzeros,
                     const int * indptr, const int * indices, const float * data);

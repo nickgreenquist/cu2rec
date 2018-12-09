@@ -4,7 +4,8 @@
 #include <iostream>
 
 namespace config {
-    // CUDA variables
+    // CUDA constant variables
+    // These get cached heavily, and don't eat up registers
     __constant__ int cur_iterations = 0;
     __constant__ int total_iterations = 1000;
     __constant__ int n_factors = 10;
@@ -18,22 +19,36 @@ namespace config {
 
     class Config {
         public:
-            // CUDA variables
+            // Current iteration count
             int cur_iterations = 0;
-            int total_iterations = 1000;
-            int n_factors = 50;
+            // Total iteration count
+            int total_iterations = 8000;
+            // Number of latent factors to use
+            int n_factors = 75;
+            // The learning rate for SGD
             float learning_rate = 0.07;
+            // The seed for the random number generator
             int seed = 42;
+            // The regularization parameter for the user matrix
             float P_reg = 0.08;
+            // The regularization parameter for the item matrix
             float Q_reg = 0.1;
+            // The regularization parameter for user biases
             float user_bias_reg = 0.003;
+            // The regularization parameter for item biases
             float item_bias_reg = 0.003;
+            // Whether we're doing full training or partial fit
             bool is_train = true;
 
-            // Host variables
+            // The number of threads in a block
             int n_threads = 32; // Must be 2^0 to 2^9
+            // The number of iterations before calculating loss 
             int check_error = 100;
+            // The number of times loss can stay constant or increase
+            // before triggering a learning rate decay
             float patience = 3;
+            // The amount of decay for learning rate. When patience
+            // reaches zero, learning rate gets multiplied by this amount.
             float learning_rate_decay = 0.2;
 
             bool read_config(std::string file_path);

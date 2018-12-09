@@ -9,6 +9,9 @@
 
 using namespace cu2rec;
 
+// The type of error (loss) we use
+// RMSE is Root Mean Squared Error and MAE is Mean Absolute Error,
+// both very common for recommender systems.
 enum ErrorType { MAE, RMSE };
 
 // kernel headers
