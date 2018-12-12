@@ -91,6 +91,11 @@ void train(CudaCSRMatrix* train_matrix, CudaCSRMatrix* test_matrix, config::Conf
     double time_taken;
     clock_t start, end;
 
+    // Change the starting user in order to not bias the algorithm
+    // to favor later users.
+    int start_user = 0;
+    int start_change_speed = 250;
+
     // Adaptive learning rate setup
     float train_rmse, train_mae, validation_rmse, validation_mae, last_validation_rmse;
     validation_rmse = validation_mae = std::numeric_limits<float>::max();
@@ -103,8 +108,10 @@ void train(CudaCSRMatrix* train_matrix, CudaCSRMatrix* test_matrix, config::Conf
         // Run single iteration of SGD
         sgd_update<<<dim_grid_sgd, dim_block>>>(train_matrix->indptr, train_matrix->indices, train_matrix->data, P_device->data, Q_device->data, 
                                                 Q_device_target->data, user_count, user_bias_device, item_bias_device, item_bias_target, d_state,
-                                                global_bias);
+                                                global_bias, start_user);
         CHECK_CUDA(cudaGetLastError());
+
+        start_user += start_change_speed;
 
         // Calculate total loss first, last, and every check_error iterations
         if((i + 1) % cfg->check_error == 0 || i == 0 || (i + 1) % cfg->total_iterations == 0) {
