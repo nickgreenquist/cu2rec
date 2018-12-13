@@ -44,6 +44,7 @@ __global__ void sgd_update(int *indptr, int *indices, const float *data, float *
             // get the error random item y_i
             float error_y_i = data[y_i] - get_prediction(config::n_factors, &P[x * config::n_factors], &Q[y * config::n_factors], ub, ib, global_bias);
 
+            // TODO: Implement with CAS. Try to set to true with compare value as false. If return is true, we were first to set to true
             // check if someone already updated this item's feature weights
             bool early_bird = !item_is_updated[y];
             item_is_updated[y] = true;
