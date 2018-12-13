@@ -36,6 +36,11 @@ void train(CudaCSRMatrix* train_matrix, CudaCSRMatrix* test_matrix, config::Conf
     CudaDenseMatrix* P_device_target = new CudaDenseMatrix(user_count, cfg->n_factors, P);
     CudaDenseMatrix* Q_device_target = new CudaDenseMatrix(item_count, cfg->n_factors, Q);
 
+    // Flag to check if item's weights have been updated for each iteration
+    bool *item_is_updated;
+    CHECK_CUDA(cudaMalloc(&item_is_updated, item_count * sizeof(bool)));
+    CHECK_CUDA(cudaMemset(item_is_updated, false, item_count * sizeof(bool)));
+
     // Create the errors
     float *errors = new float[train_matrix->nonzeros];
     float *errors_device;
@@ -69,10 +74,6 @@ void train(CudaCSRMatrix* train_matrix, CudaCSRMatrix* test_matrix, config::Conf
     dim3 dim_grid_sgd(user_count / cfg->n_threads + 1);
     dim3 dim_grid_loss(256); // TODO: figure out a way to use a config value for this
     dim3 dim_block_loss(2 * cfg->n_threads);
-    dim3 dim_grid_P_reg_loss(P_device->rows * P_device->cols / cfg->n_threads + 1);
-    dim3 dim_grid_Q_reg_loss(Q_device->rows * Q_device->cols / cfg->n_threads + 1);
-    dim3 dim_grid_user_bias_reg_loss(user_count / cfg->n_threads + 1);
-    dim3 dim_grid_item_bias_reg_loss(item_count / cfg->n_threads + 1);
 
     // Create loss per block
     double *block_errors_host = new double[dim_grid_loss.x];
@@ -108,7 +109,7 @@ void train(CudaCSRMatrix* train_matrix, CudaCSRMatrix* test_matrix, config::Conf
         // Run single iteration of SGD
         sgd_update<<<dim_grid_sgd, dim_block>>>(train_matrix->indptr, train_matrix->indices, train_matrix->data, P_device->data, Q_device->data, 
                                                 Q_device_target->data, user_count, user_bias_device, item_bias_device, item_bias_target, d_state,
-                                                global_bias, start_user);
+                                                global_bias, start_user, item_is_updated);
         CHECK_CUDA(cudaGetLastError());
 
         start_user += start_change_speed;
@@ -163,6 +164,9 @@ void train(CudaCSRMatrix* train_matrix, CudaCSRMatrix* test_matrix, config::Conf
         swap(Q_device, Q_device_target);
         swap(item_bias_device, item_bias_target);
 
+        // Reset each item's updated status for next iteration
+        CHECK_CUDA(cudaMemset(item_is_updated, false, item_count * sizeof(bool)));
+
         cfg->cur_iterations += 1;
     }
     CHECK_CUDA(cudaDeviceSynchronize());
@@ -189,6 +193,7 @@ void train(CudaCSRMatrix* train_matrix, CudaCSRMatrix* test_matrix, config::Conf
     CHECK_CUDA(cudaFree(user_bias_target));
     CHECK_CUDA(cudaFree(item_bias_target));
     CHECK_CUDA(cudaFree(d_state));
+    CHECK_CUDA(cudaFree(item_is_updated));
     delete P_device;
     delete P_device_target;
     delete Q_device;
