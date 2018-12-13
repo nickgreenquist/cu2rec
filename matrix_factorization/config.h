@@ -22,9 +22,9 @@ namespace config {
             // Current iteration count
             int cur_iterations = 0;
             // Total iteration count
-            int total_iterations = 8000;
+            int total_iterations = 3000;
             // Number of latent factors to use
-            int n_factors = 75;
+            int n_factors = 50;
             // The learning rate for SGD
             float learning_rate = 0.07;
             // The seed for the random number generator
