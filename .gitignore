@@ -4,3 +4,5 @@ data/*
 data/test/gen/*
 .persistd/
 __pycache__/
+results/
+exp.cfg
