@@ -5,7 +5,7 @@ mkdir -p results
 commit=`git rev-parse --short HEAD`
 date=`date '+%Y-%m-%d-%H-%M-%S'`
 filename="results/$date-$commit.txt"
-datasets=('ml-100k' 'ml-20m')
+datasets=('ml-100k' 'ml-20m' 'netflix')
 iterations=(100 500 1000 5000 10000)
 factors=(50 300)
 
