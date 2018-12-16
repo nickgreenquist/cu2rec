@@ -57,5 +57,9 @@ namespace config {
         printf("user_bias_reg: %f\n", user_bias_reg);
         printf("item_bias_reg: %f\n", item_bias_reg);
         printf("is_train: %s\n", is_train?"true":"false");
+        printf("n_threads: %d\n", n_threads);
+        printf("check_error: %d\n", check_error);
+        printf("patience: %f\n", patience);
+        printf("learning_rate_decay: %f\n", learning_rate_decay);
     }
 }

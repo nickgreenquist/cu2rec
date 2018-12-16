@@ -22,31 +22,30 @@ namespace config {
             // Current iteration count
             int cur_iterations = 0;
             // Total iteration count
-            int total_iterations = 3000;
+            int total_iterations = 1000;
             // Number of latent factors to use
             int n_factors = 50;
             // The learning rate for SGD
-            float learning_rate = 0.07;
+            float learning_rate = 0.01;
             // The seed for the random number generator
             int seed = 42;
             // The regularization parameter for the user matrix
-            float P_reg = 0.08;
+            float P_reg = 0.02;
             // The regularization parameter for the item matrix
-            float Q_reg = 0.1;
+            float Q_reg = 0.02;
             // The regularization parameter for user biases
-            float user_bias_reg = 0.003;
+            float user_bias_reg = 0.02;
             // The regularization parameter for item biases
-            float item_bias_reg = 0.003;
+            float item_bias_reg = 0.02;
             // Whether we're doing full training or partial fit
             bool is_train = true;
-
             // The number of threads in a block
             int n_threads = 32; // Must be 2^0 to 2^9
             // The number of iterations before calculating loss 
-            int check_error = 100;
+            int check_error = 500;
             // The number of times loss can stay constant or increase
             // before triggering a learning rate decay
-            float patience = 3;
+            float patience = 2;
             // The amount of decay for learning rate. When patience
             // reaches zero, learning rate gets multiplied by this amount.
             float learning_rate_decay = 0.2;
