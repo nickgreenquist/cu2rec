@@ -30,6 +30,9 @@ The makefile compiles for compute capability 5.2. If you have a GPU that does no
 1. `make mf`
 2. `bin/mf -c <config_file> <ratings_file_train> <ratings_file_test>`
 
+### Running all possible configurations
+In order to run all of the experiments mentioned in the report, you can `cd experiments` and run the included bash scripts. `cu2rec.sh` will give you the total runtimes and error metrics for all configurations, while `cu2rec_prof.sh` will give you all the `nvprof` results. Make sure you have all the data as described in the data section.
+
 ## Getting recommendations for a user
 1. Make sure you get the user data into the same ratings format as MovieLens.
 2. `make predict`
