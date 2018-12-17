@@ -102,12 +102,17 @@ void test_sgd() {
     // Set up random state using iteration as seed
     initCurand<<<dimGrid, dimBlock>>>(d_state, 1, matrix->rows);
 
+    // Flag to check if item's weights have been updated for each iteration
+    bool *item_is_updated;
+    CHECK_CUDA(cudaMalloc(&item_is_updated, cols * sizeof(bool)));
+    CHECK_CUDA(cudaMemset(item_is_updated, false, cols * sizeof(bool)));
+
     // Call SGD kernel
     float shared_mem_size = rows * sizeof(float);
     sgd_update<<<dimGrid, dimBlock, shared_mem_size>>>(matrix->indptr, matrix->indices, matrix->data, P_device, Q_device, Q_device_target,
                                       rows, user_bias_device, item_bias_device,
                                       item_bias_target, d_state,
-                                      global_bias);
+                                      global_bias, 0, item_is_updated);
     std::swap(Q_device, Q_device_target);
     std::swap(item_bias_device, item_bias_target);
 
