@@ -22,7 +22,7 @@ namespace config {
             // Current iteration count
             int cur_iterations = 0;
             // Total iteration count
-            int total_iterations = 1000;
+            int total_iterations = 5000;
             // Number of latent factors to use
             int n_factors = 50;
             // The learning rate for SGD
